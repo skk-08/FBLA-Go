@@ -69,18 +69,16 @@ function AuthGuard() {
 export default function RootLayout() {
   const sessionLoading = useAuthStore((s) => s.sessionLoading);
 
-  if (sessionLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary }}>
-        <ActivityIndicator size="large" color={colors.accent} />
-      </View>
-    );
-  }
-
   return (
     <SafeAreaProvider>
       <AuthGuard />
-      <Stack screenOptions={{ headerShown: false }} />
+      {sessionLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary }}>
+          <ActivityIndicator size="large" color={colors.accent} />
+        </View>
+      ) : (
+        <Stack screenOptions={{ headerShown: false }} />
+      )}
     </SafeAreaProvider>
   );
 }
