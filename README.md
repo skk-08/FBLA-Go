@@ -2,7 +2,7 @@
 
 > **Your FBLA. All in one place.**
 
-FBLAgo is a cross-platform mobile application built for the **FBLA State 2025–2026 Mobile Application Development** competition. It centralizes the FBLA member experience — events, chapter communication, deadlines, rubrics, and member ID — in one unified app.
+FBLAgo is a cross-platform mobile application built for the **FBLA State 2025–2026 Mobile Application Development** competition. It centralizes the FBLA member experience: events, chapter communication, deadlines, rubrics, and member ID in one unified app.
 
 ---
 
