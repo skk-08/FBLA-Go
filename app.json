@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "FBLAgo",
-    "slug": "fblago",
+    "slug": "fbla-go",
     "scheme": "fblago",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -23,7 +23,10 @@
         "backgroundColor": "#003087"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.fblago.app"
+      "package": "com.fblago.app",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,11 +35,20 @@
       "expo-router",
       [
         "expo-image-picker",
-        { "photosPermission": "FBLAgo needs photo access for your member ID." }
+        {
+          "photosPermission": "FBLAgo needs photo access for your member ID."
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3b7503e8-57f2-483a-80f9-67ad51e1dfa5"
+      }
+    },
+    "owner": "srilu.k"
   }
 }
