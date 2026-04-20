@@ -19,8 +19,10 @@ export function usePlannerViewModel() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const data = await fetchCalendarEvents(user.id, profile?.chapter_id ?? '');
+      const data = await fetchCalendarEvents(user.id, profile?.chapter_id || null);
       setEvents(data ?? []);
+    } catch (_) {
+      setEvents([]);
     } finally {
       setLoading(false);
     }

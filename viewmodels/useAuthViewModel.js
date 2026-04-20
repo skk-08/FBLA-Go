@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { createProfile } from '../models/userModel';
+import { updateProfile } from '../models/userModel';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
@@ -106,7 +106,17 @@ export function useSignupViewModel() {
     setIsLoading(true);
     setServerError(null);
     try {
-      const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name:    fullName.trim(),
+            chapter_name: chapterName.trim(),
+            grade:        parseInt(grade, 10),
+          },
+        },
+      });
       if (error) {
         if (error.message.toLowerCase().includes('already registered')) {
           setErrors((e) => ({ ...e, email: 'An account with this email already exists.' }));
@@ -116,11 +126,12 @@ export function useSignupViewModel() {
         return;
       }
       if (data.user) {
-        await createProfile(data.user.id, {
+        // Trigger already created the profile row — update it with the user's details
+        await updateProfile(data.user.id, {
           full_name:    fullName.trim(),
           chapter_name: chapterName.trim(),
           grade:        parseInt(grade, 10),
-        });
+        }).catch(() => {});
       }
     } catch (err) {
       setServerError('Something went wrong. Please try again.');

@@ -11,7 +11,7 @@ import { colors } from '../constants/theme';
 function AuthGuard() {
   const router    = useRouter();
   const segments  = useSegments();
-  const { session, sessionLoading, setSession, setProfile, setLoading } = useAuthStore();
+  const { session, sessionLoading, profile, setSession, setProfile, setLoading } = useAuthStore();
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -40,28 +40,24 @@ function AuthGuard() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    const inAuth        = segments[0] === '(auth)';
-    const inOnboarding  = segments[0] === 'onboarding';
+    const inAuth       = segments[0] === '(auth)';
+    const inOnboarding = segments[0] === 'onboarding';
+
     if (!session && !inAuth) {
       router.replace('/(auth)/login');
       return;
     }
     if (session && inAuth) {
       const { profile: p } = useAuthStore.getState();
-      if (p && !p.onboarding_complete) {
+      // Wait until profile is loaded before deciding where to send the user
+      if (!p) return;
+      if (!p.onboarding_complete) {
         router.replace('/onboarding');
       } else {
         router.replace('/(tabs)');
       }
-      return;
     }
-    if (session && !inAuth && !inOnboarding) {
-      const { profile: p } = useAuthStore.getState();
-      if (p && !p.onboarding_complete) {
-        router.replace('/onboarding');
-      }
-    }
-  }, [session, sessionLoading, segments]);
+  }, [session, sessionLoading, segments, profile]);
 
   return null;
 }

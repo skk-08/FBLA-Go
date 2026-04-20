@@ -25,6 +25,8 @@ export function useMessagingViewModel() {
     try {
       const data = await fetchMessages(chapterId);
       setMessages(data ?? []);
+    } catch (_) {
+      setMessages([]);
     } finally {
       setLoading(false);
     }
