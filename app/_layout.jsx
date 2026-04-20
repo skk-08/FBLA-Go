@@ -40,9 +40,27 @@ function AuthGuard() {
 
   useEffect(() => {
     if (sessionLoading) return;
-    const inAuth = segments[0] === '(auth)';
-    if (!session && !inAuth) router.replace('/(auth)/login');
-    if (session  &&  inAuth)  router.replace('/(tabs)');
+    const inAuth        = segments[0] === '(auth)';
+    const inOnboarding  = segments[0] === 'onboarding';
+    if (!session && !inAuth) {
+      router.replace('/(auth)/login');
+      return;
+    }
+    if (session && inAuth) {
+      const { profile: p } = useAuthStore.getState();
+      if (p && !p.onboarding_complete) {
+        router.replace('/onboarding');
+      } else {
+        router.replace('/(tabs)');
+      }
+      return;
+    }
+    if (session && !inAuth && !inOnboarding) {
+      const { profile: p } = useAuthStore.getState();
+      if (p && !p.onboarding_complete) {
+        router.replace('/onboarding');
+      }
+    }
   }, [session, sessionLoading, segments]);
 
   return null;
