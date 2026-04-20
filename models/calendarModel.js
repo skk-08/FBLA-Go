@@ -1,11 +1,13 @@
 import { supabase } from '../lib/supabase';
 
 export async function fetchCalendarEvents(userId, chapterId) {
-  const { data, error } = await supabase
-    .from('calendar_events')
-    .select('*')
-    .or(`user_id.eq.${userId},and(is_shared.eq.true,chapter_id.eq.${chapterId})`)
-    .order('start_time');
+  let query = supabase.from('calendar_events').select('*').order('start_time');
+  if (chapterId) {
+    query = query.or(`user_id.eq.${userId},and(is_shared.eq.true,chapter_id.eq.${chapterId})`);
+  } else {
+    query = query.eq('user_id', userId);
+  }
+  const { data, error } = await query;
   if (error) throw error;
   return data;
 }

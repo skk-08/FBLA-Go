@@ -31,8 +31,8 @@ export function useMessagingViewModel() {
   }, [chapterId]);
 
   useEffect(() => {
+    if (!chapterId) { setLoading(false); return; }
     load();
-    if (!chapterId) return;
     channelRef.current = subscribeToMessages(chapterId, (payload) => {
       setMessages((prev) => [...prev, payload.new]);
     });

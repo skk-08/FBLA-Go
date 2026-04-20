@@ -21,10 +21,12 @@ export async function fetchNextCompetitionDate(userId) {
   const { data, error } = await supabase
     .from('user_events')
     .select('events(competition_date, name)')
-    .eq('user_id', userId)
-    .not('events.competition_date', 'is', null)
-    .order('events(competition_date)', { ascending: true })
-    .limit(1);
+    .eq('user_id', userId);
   if (error) throw error;
-  return data?.[0]?.events ?? null;
+  if (!data?.length) return null;
+  const withDates = data
+    .map((ue) => ue.events)
+    .filter((e) => e?.competition_date)
+    .sort((a, b) => new Date(a.competition_date) - new Date(b.competition_date));
+  return withDates[0] ?? null;
 }
