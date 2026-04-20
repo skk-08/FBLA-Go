@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "FBLAgo",
+    "slug": "fblago",
+    "scheme": "fblago",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#003087"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.fblago.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#003087"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.fblago.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        { "photosPermission": "FBLAgo needs photo access for your member ID." }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
