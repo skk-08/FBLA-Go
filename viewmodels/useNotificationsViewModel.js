@@ -10,7 +10,7 @@ export function useNotificationsViewModel() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) { setLoading(false); return; }
     setLoading(true);
     fetchNotifications(user.id)
       .then((data) => {
@@ -21,5 +21,12 @@ export function useNotificationsViewModel() {
       .finally(() => setLoading(false));
   }, [user?.id]);
 
-  return { notifications, loading };
+  function markAllRead() {
+    if (!user?.id) return;
+    markAllNotificationsRead(user.id).catch(() => {});
+    clearNotifications();
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  }
+
+  return { notifications, loading, markAllRead };
 }

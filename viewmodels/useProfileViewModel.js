@@ -6,20 +6,22 @@ import { fetchUserEvents } from '../models/eventModel';
 
 export function useProfileViewModel() {
   const { user, profile, setProfile } = useAuthStore();
-  const [userEvents, setUserEvents] = useState([]);
-  const [editing, setEditing] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [chapterName, setChapterName] = useState('');
-  const [grade, setGrade] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState(null);
+  const [userEvents,   setUserEvents]   = useState([]);
+  const [editing,      setEditing]      = useState(false);
+  const [fullName,     setFullName]     = useState('');
+  const [chapterName,  setChapterName]  = useState('');
+  const [grade,        setGrade]        = useState('');
+  const [bio,          setBio]          = useState('');
+  const [saving,       setSaving]       = useState(false);
+  const [uploading,    setUploading]    = useState(false);
+  const [error,        setError]        = useState(null);
 
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name ?? '');
       setChapterName(profile.chapter_name ?? '');
       setGrade(String(profile.grade ?? ''));
+      setBio(profile.bio ?? '');
     }
     if (user?.id) {
       fetchUserEvents(user.id).then(setUserEvents).catch(() => {});
@@ -31,9 +33,10 @@ export function useProfileViewModel() {
     setError(null);
     try {
       const updated = await updateProfile(user.id, {
-        full_name: fullName.trim(),
+        full_name:    fullName.trim(),
         chapter_name: chapterName.trim(),
-        grade: parseInt(grade, 10),
+        grade:        parseInt(grade, 10) || null,
+        bio:          bio.trim(),
       });
       setProfile({ ...profile, ...updated });
       setEditing(false);
@@ -54,7 +57,7 @@ export function useProfileViewModel() {
     if (result.canceled) return;
     setUploading(true);
     try {
-      const url = await uploadMemberID(user.id, result.assets[0].uri);
+      const url     = await uploadMemberID(user.id, result.assets[0].uri);
       const updated = await updateProfile(user.id, { member_id_url: url });
       setProfile({ ...profile, ...updated });
     } catch (e) {
@@ -70,6 +73,7 @@ export function useProfileViewModel() {
     fullName, setFullName,
     chapterName, setChapterName,
     grade, setGrade,
+    bio, setBio,
     save, saving,
     pickAndUploadID, uploading,
     error,

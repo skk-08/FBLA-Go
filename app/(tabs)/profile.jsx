@@ -1,7 +1,8 @@
 import { View, Text, Image, ScrollView, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fontSize, spacing } from '../constants/theme';
-import { useProfileViewModel } from '../viewmodels/useProfileViewModel';
+import { useRouter } from 'expo-router';
+import { colors, fontSize, spacing } from '../../constants/theme';
+import { useProfileViewModel } from '../../viewmodels/useProfileViewModel';
 
 function Avatar({ name, photoUrl, size = 120 }) {
   if (photoUrl) {
@@ -31,11 +32,14 @@ function InterestPill({ label }) {
   );
 }
 
-export default function ProfileScreen() {
+export default function ProfileTab() {
+  const router = useRouter();
   const { profile, userEvents, uploading, pickAndUploadID } = useProfileViewModel();
 
   const name      = profile?.full_name ?? 'Member';
-  const roleLabel = profile?.chapter_name ?? null;
+  const role      = profile?.role ?? 'member';
+  const chapter   = profile?.chapter_name ?? null;
+  const roleLabel = chapter ? `${role.charAt(0).toUpperCase() + role.slice(1)}, ${chapter}` : null;
   const interests = Array.isArray(profile?.interests) ? profile.interests : [];
   const bio       = profile?.bio ?? `Passionate about business and FBLA. Member of ${profile?.chapter_name ?? 'my chapter'}.`;
 
@@ -50,7 +54,7 @@ export default function ProfileScreen() {
           {roleLabel ? <Text style={s.role}>{roleLabel}</Text> : null}
         </View>
 
-        {/* White card body with rounded top */}
+        {/* White card body */}
         <View style={s.body}>
 
           <View style={s.section}>
@@ -100,6 +104,13 @@ export default function ProfileScreen() {
             )}
           </Pressable>
 
+          <Pressable
+            style={[s.uploadBtn, { marginTop: spacing.sm, backgroundColor: colors.primary }]}
+            onPress={() => router.push('/(tabs)/settings')}
+          >
+            <Text style={[s.uploadText, { color: '#fff' }]}>Account Settings</Text>
+          </Pressable>
+
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -107,8 +118,8 @@ export default function ProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  safe:           { flex: 1, backgroundColor: '#7A8FA6' },
-  headerSection:  { backgroundColor: '#7A8FA6', alignItems: 'center', paddingTop: spacing.xl, paddingBottom: spacing.xxl },
+  safe:           { flex: 1, backgroundColor: colors.profileHeader },
+  headerSection:  { backgroundColor: colors.profileHeader, alignItems: 'center', paddingTop: spacing.xl, paddingBottom: spacing.xxl },
   name:           { color: colors.white, fontSize: 24, fontWeight: '800', marginTop: spacing.md },
   role:           { color: colors.white, fontSize: fontSize.sm, marginTop: 4, opacity: 0.9 },
   body:           { backgroundColor: '#F5F5F5', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.xl, flex: 1, marginTop: -16 },

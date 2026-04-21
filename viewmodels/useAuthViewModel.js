@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { updateProfile } from '../models/userModel';
+import { fetchProfile, updateProfile, upsertProfile } from '../models/userModel';
+import { useAuthStore } from '../store/authStore';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
@@ -76,9 +77,10 @@ export function useLoginViewModel() {
 }
 
 export function useSignupViewModel() {
-  const [fullName,    setFullName]    = useState('');
-  const [chapterName, setChapterName] = useState('');
-  const [grade,       setGrade]       = useState('');
+  const [firstName,   setFirstName]   = useState('');
+  const [lastName,    setLastName]    = useState('');
+  const [school,      setSchool]      = useState('');
+  const [role,        setRole]        = useState('member');
   const [email,       setEmail]       = useState('');
   const [password,    setPassword]    = useState('');
   const [confirm,     setConfirm]     = useState('');
@@ -86,12 +88,8 @@ export function useSignupViewModel() {
   const [serverError, setServerError] = useState(null);
   const [isLoading,   setIsLoading]   = useState(false);
 
-  function validate() {
+  function validateCredentials() {
     const e = {};
-    if (!fullName.trim())           e.fullName    = 'Full name is required.';
-    if (!chapterName.trim())        e.chapterName = 'Chapter name is required.';
-    const gradeNum = parseInt(grade, 10);
-    if (!grade || gradeNum < 9 || gradeNum > 12) e.grade = 'Grade must be between 9 and 12.';
     const emailErr = validateEmail(email);
     if (emailErr) e.email = emailErr;
     const passErr = validatePassword(password);
@@ -101,49 +99,145 @@ export function useSignupViewModel() {
     return Object.keys(e).length === 0;
   }
 
-  async function handleSignup() {
-    if (!validate()) return;
+  function validateProfileFields() {
+    const e = {};
+    if (!firstName.trim()) e.firstName = 'First name is required.';
+    if (!lastName.trim())  e.lastName  = 'Last name is required.';
+    if (!school.trim())    e.school    = 'School is required.';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
+
+  // Step 0 — validate credentials locally only, no Supabase call yet
+  function createAccount() {
+    return validateCredentials();
+  }
+
+  // Step 3 — create auth account + save full profile in one shot
+  async function completeProfile(photoUri, interests) {
+    if (!validateProfileFields()) return false;
     setIsLoading(true);
     setServerError(null);
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // 1. Try to create the auth account
+      let userId;
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: {
-          data: {
-            full_name:    fullName.trim(),
-            chapter_name: chapterName.trim(),
-            grade:        parseInt(grade, 10),
-          },
-        },
       });
-      if (error) {
-        if (error.message.toLowerCase().includes('already registered')) {
-          setErrors((e) => ({ ...e, email: 'An account with this email already exists.' }));
+
+      if (signUpError) {
+        // "Already registered" can happen if a previous signup attempt created
+        // the auth user but the profile save failed. Try signing in and
+        // recovering the incomplete profile rather than blocking the user.
+        if (signUpError.message.toLowerCase().includes('already registered')) {
+          const { data: signInData, error: signInError } =
+            await supabase.auth.signInWithPassword({ email: email.trim(), password });
+
+          if (signInError) {
+            // Wrong password — this is a genuine existing account conflict
+            setServerError('An account with this email already exists. Please log in instead.');
+            return false;
+          }
+
+          // fetchProfile throws PGRST116 if no row yet — treat that as incomplete
+          const existingProfile = await fetchProfile(signInData.user.id).catch(() => null);
+          if (existingProfile?.onboarding_complete) {
+            await supabase.auth.signOut();
+            setServerError('An account with this email already exists. Please log in instead.');
+            return false;
+          }
+
+          // Orphaned partial account — resume and finish setup
+          userId = signInData.user.id;
         } else {
-          setServerError(error.message);
+          setServerError(signUpError.message);
+          return false;
         }
-        return;
+      } else {
+        if (!data.user) {
+          setServerError('Could not create account. Please try again.');
+          return false;
+        }
+        userId = data.user.id;
+
+        // If Supabase "Confirm email" is ON, signUp returns no session.
+        // Sign in immediately so the client is authenticated before upsertProfile.
+        if (!data.session) {
+          const { data: signInData, error: signInError } =
+            await supabase.auth.signInWithPassword({ email: email.trim(), password });
+          if (signInError) {
+            if (signInError.message.toLowerCase().includes('not confirmed')) {
+              setServerError('Check your inbox and confirm your email address, then tap Complete again.');
+            } else {
+              setServerError(signInError.message);
+            }
+            return false;
+          }
+          userId = signInData.user.id;
+        }
       }
-      if (data.user) {
-        // Trigger already created the profile row — update it with the user's details
-        await updateProfile(data.user.id, {
-          full_name:    fullName.trim(),
-          chapter_name: chapterName.trim(),
-          grade:        parseInt(grade, 10),
-        }).catch(() => {});
+
+      // 2. Ensure public.users has this user's row (in case the DB trigger didn't run)
+      const { error: usersError } = await supabase
+        .from('users')
+        .upsert({ id: userId, email: email.trim() }, { onConflict: 'id' });
+      if (usersError) {
+        // Non-fatal: row already exists (23505) or RLS blocked the insert because
+        // a DB trigger already created the row (42501 / row-level security policy)
+        const nonFatal =
+          usersError.code === '23505' ||
+          usersError.code === '42501' ||
+          usersError.message?.includes('already exists') ||
+          usersError.message?.includes('row-level security');
+        if (!nonFatal) {
+          setServerError(usersError.message || 'Could not initialise account. Please try again.');
+          return false;
+        }
       }
+
+      // 3. Save profile and mark onboarding complete
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      const savedProfile = await upsertProfile(userId, {
+        full_name:           fullName,
+        chapter_name:        school.trim(),
+        role:                role || 'member',
+        onboarding_complete: true,
+      });
+
+      // Save interests separately — column may not exist yet if migration hasn't run
+      if (interests?.length) {
+        const { error: interestsError } = await supabase
+          .from('profiles')
+          .update({ interests })
+          .eq('user_id', userId);
+        if (interestsError && !interestsError.message?.includes('schema cache') && interestsError.code !== 'PGRST204') {
+          console.warn('[completeProfile] interests save failed:', interestsError.message);
+        }
+      }
+
+      // 4. Update auth store so AuthGuard immediately sees onboarding_complete: true
+      useAuthStore.getState().setProfile(savedProfile);
+      return true;
     } catch (err) {
-      setServerError('Something went wrong. Please try again.');
+      console.error('[completeProfile] caught:', err);
+      const msg = err?.message
+        || (typeof err === 'string' ? err : null)
+        || JSON.stringify(err)
+        || 'Could not complete setup. Please try again.';
+      setServerError(msg);
+      return false;
     } finally {
       setIsLoading(false);
     }
   }
 
   return {
-    fullName, setFullName, chapterName, setChapterName,
-    grade, setGrade, email, setEmail,
+    firstName, setFirstName, lastName, setLastName,
+    school, setSchool, role, setRole,
+    email, setEmail,
     password, setPassword, confirm, setConfirm,
-    errors, serverError, isLoading, handleSignup,
+    errors, serverError, isLoading,
+    createAccount, completeProfile, validateProfileFields,
   };
 }

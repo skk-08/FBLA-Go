@@ -1,16 +1,21 @@
 import {
-  View, Text, ScrollView, StyleSheet, Modal, TouchableOpacity,
-  TextInput, Switch, ActivityIndicator, KeyboardAvoidingView, Platform,
+  View, Text, Image, StyleSheet, Modal, Pressable,
+  TextInput, Switch, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+
+const LOGO = require('../../assets/fblago-logo.png');
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
+import { CalendarList } from 'react-native-calendars';
 import { format, parseISO } from 'date-fns';
 import { colors, fontSize, spacing, radius } from '../../constants/theme';
 import { usePlannerViewModel } from '../../viewmodels/usePlannerViewModel';
+import { useUIStore } from '../../store/uiStore';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 
 export default function PlannerScreen() {
+  const { isDarkMode } = useUIStore();
+  const dark = isDarkMode;
   const {
     selected, setSelected,
     markedDates, dayEvents,
@@ -22,147 +27,177 @@ export default function PlannerScreen() {
     loading, saving,
   } = usePlannerViewModel();
 
-  const calendarTheme = {
-    backgroundColor: colors.primary,
-    calendarBackground: colors.surface,
-    textSectionTitleColor: colors.muted,
-    selectedDayBackgroundColor: colors.accent,
-    selectedDayTextColor: colors.primary,
-    todayTextColor: colors.accent,
-    dayTextColor: colors.white,
-    dotColor: colors.accent,
-    monthTextColor: colors.white,
-    arrowColor: colors.accent,
-    textDisabledColor: colors.border,
-  };
-
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Planner</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-          <Ionicons name="add" size={22} color={colors.primary} />
-        </TouchableOpacity>
+    <SafeAreaView style={[s.safe, dark && { backgroundColor: '#0A1A3A' }]} edges={['top']}>
+      {/* Dark blue header */}
+      <View style={s.header}>
+        <View style={s.headerLogoClip}><Image source={LOGO} style={s.headerLogo} resizeMode="contain" /></View>
+        <Text style={s.headerTitle}>Planner</Text>
       </View>
 
       {loading ? <LoadingSpinner /> : (
-        <ScrollView>
-          <Calendar
+        <View style={{ flex: 1, backgroundColor: dark ? '#121212' : '#fff' }}>
+          <CalendarList
+            key={dark ? 'dark' : 'light'}
             current={selected}
             onDayPress={(day) => setSelected(day.dateString)}
             markedDates={{
               ...markedDates,
-              [selected]: { ...(markedDates[selected] ?? {}), selected: true },
+              [selected]: { ...(markedDates[selected] ?? {}), selected: true, selectedColor: colors.primary },
             }}
-            theme={calendarTheme}
+            pastScrollRange={3}
+            futureScrollRange={12}
+            showScrollIndicator
+            horizontal={false}
+            theme={{
+              backgroundColor: dark ? '#121212' : '#fff',
+              calendarBackground: dark ? '#121212' : '#fff',
+              textSectionTitleColor: dark ? '#aaa' : '#555',
+              selectedDayBackgroundColor: colors.primary,
+              selectedDayTextColor: '#fff',
+              todayTextColor: colors.primary,
+              dayTextColor: dark ? '#eee' : '#1A1A1A',
+              dotColor: colors.accent,
+              monthTextColor: dark ? '#eee' : '#1A1A1A',
+              arrowColor: colors.primary,
+              textDisabledColor: dark ? '#444' : '#ccc',
+              textDayFontWeight: '500',
+              textMonthFontWeight: '700',
+              textMonthFontSize: fontSize.lg,
+            }}
           />
 
-          <View style={styles.eventsSection}>
-            <Text style={styles.sectionTitle}>
-              {format(new Date(selected + 'T12:00:00'), 'MMMM d, yyyy')}
-            </Text>
-            {dayEvents.length === 0 ? (
-              <Text style={styles.empty}>No events on this day</Text>
-            ) : (
-              dayEvents.map((ev) => (
-                <View key={ev.id} style={styles.eventRow}>
-                  <View style={[styles.dot, ev.is_shared && styles.sharedDot]} />
-                  <View style={styles.eventInfo}>
-                    <Text style={styles.eventTitle}>{ev.title}</Text>
-                    <Text style={styles.eventTime}>
-                      {ev.start_time ? format(parseISO(ev.start_time), 'h:mm a') : ''}
-                      {ev.is_shared ? ' · Shared' : ''}
-                    </Text>
-                  </View>
-                  <TouchableOpacity onPress={() => removeEvent(ev.id)}>
-                    <Ionicons name="trash-outline" size={18} color={colors.muted} />
-                  </TouchableOpacity>
-                </View>
-              ))
-            )}
-          </View>
-        </ScrollView>
+          {/* Add Entry button */}
+          <Pressable style={s.addEntryBtn} onPress={() => setModalVisible(true)}>
+            <Text style={s.addEntryText}>Add Entry</Text>
+          </Pressable>
+        </View>
       )}
 
+      {/* Day events panel */}
+      {dayEvents.length > 0 && !modalVisible && (
+        <View style={[s.dayPanel, dark && { backgroundColor: '#1E1E1E' }]}>
+          <Text style={[s.dayPanelTitle, dark && { color: '#eee' }]}>
+            {format(new Date(selected + 'T12:00:00'), 'MMMM d')}
+          </Text>
+          {dayEvents.map((ev) => (
+            <View key={ev.id} style={s.eventRow}>
+              <View style={[s.eventDot, ev.is_shared && { backgroundColor: colors.success }]} />
+              <Text style={[s.eventTitle, dark && { color: '#eee' }]} numberOfLines={1}>{ev.title}</Text>
+              <Text style={s.eventTime}>
+                {ev.start_time ? format(parseISO(ev.start_time), 'h:mm a') : ''}
+              </Text>
+              <Pressable onPress={() => removeEvent(ev.id)} style={{ padding: 4 }}>
+                <Ionicons name="close" size={16} color="#999" />
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Add Entry Modal */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <KeyboardAvoidingView
-          style={styles.modalOverlay}
+          style={s.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>New Event</Text>
+          <ScrollView style={[s.modalCard, dark && { backgroundColor: '#1E1E1E' }]} contentContainerStyle={{ gap: spacing.md }}>
+            <Text style={[s.modalTitle, dark && { color: '#eee' }]}>Planner</Text>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Event title"
-              placeholderTextColor={colors.muted}
-              value={newTitle}
-              onChangeText={setNewTitle}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Time (e.g. 14:30)"
-              placeholderTextColor={colors.muted}
-              value={newTime}
-              onChangeText={setNewTime}
-              keyboardType="numbers-and-punctuation"
-            />
-
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Share with chapter</Text>
-              <Switch
-                value={isShared}
-                onValueChange={setIsShared}
-                trackColor={{ false: colors.border, true: colors.accent }}
-                thumbColor={colors.white}
+            {/* Activity Date */}
+            <Text style={[s.fieldLabel, dark && { color: '#eee' }]}>Activity Date</Text>
+            <View style={[s.fieldRow, dark && { backgroundColor: '#2A2A2A' }]}>
+              <Ionicons name="calendar-outline" size={20} color={dark ? '#aaa' : '#555'} />
+              <TextInput
+                style={[s.fieldInput, dark && { color: '#eee' }]}
+                placeholder="(month, day, year)"
+                placeholderTextColor="#888"
+                value={newTime}
+                onChangeText={setNewTime}
               />
             </View>
 
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.cancelBtn}
+            {/* Activity Description */}
+            <Text style={[s.fieldLabel, dark && { color: '#eee' }]}>Activity Description</Text>
+            <TextInput
+              style={[s.fieldBox, { height: 100, textAlignVertical: 'top' }, dark && { backgroundColor: '#2A2A2A', color: '#eee' }]}
+              placeholder="type here..."
+              placeholderTextColor="#888"
+              value={newTitle}
+              onChangeText={setNewTitle}
+              multiline
+            />
+
+            {/* Share */}
+            <Text style={[s.fieldLabel, dark && { color: '#eee' }]}>Share to Members/Groups</Text>
+            <Text style={s.fieldSub}>Share this entry to multiple people!</Text>
+            <View style={[s.fieldRow, dark && { backgroundColor: '#2A2A2A' }]}>
+              <Ionicons name="people-outline" size={20} color={dark ? '#aaa' : '#555'} />
+              <TextInput
+                style={[s.fieldInput, dark && { color: '#eee' }]}
+                placeholder="search people"
+                placeholderTextColor="#888"
+                editable={false}
+              />
+            </View>
+
+            {/* Show in To-Do */}
+            <View style={s.switchRow}>
+              <Text style={[s.switchLabel, dark && { color: '#eee' }]}>Show in To-Do on Dashboard</Text>
+              <Switch
+                value={isShared}
+                onValueChange={setIsShared}
+                trackColor={{ false: '#ccc', true: colors.primary }}
+                thumbColor="#fff"
+              />
+            </View>
+
+            {/* Buttons */}
+            <View style={s.modalBtns}>
+              <Pressable style={s.saveBtn} onPress={addEvent} disabled={saving}>
+                {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.saveBtnText}>Save & Close</Text>}
+              </Pressable>
+              <Pressable
+                style={[s.cancelBtn, dark && { backgroundColor: '#333' }]}
                 onPress={() => { setModalVisible(false); setNewTitle(''); setNewTime(''); }}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={addEvent} disabled={saving}>
-                {saving ? (
-                  <ActivityIndicator color={colors.primary} />
-                ) : (
-                  <Text style={styles.saveText}>Add</Text>
-                )}
-              </TouchableOpacity>
+                <Text style={[s.cancelBtnText, dark && { color: '#eee' }]}>Cancel</Text>
+              </Pressable>
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe:          { flex: 1, backgroundColor: colors.primary },
-  header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-  headerTitle:   { color: colors.white, fontSize: fontSize.xl, fontWeight: '800' },
-  addBtn:        { backgroundColor: colors.accent, width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  eventsSection: { padding: spacing.xl },
-  sectionTitle:  { color: colors.accent, fontSize: fontSize.sm, fontWeight: '700', marginBottom: spacing.md, textTransform: 'uppercase', letterSpacing: 1 },
-  empty:         { color: colors.muted, fontSize: fontSize.sm },
-  eventRow:      { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
-  dot:           { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.accent },
-  sharedDot:     { backgroundColor: colors.success },
-  eventInfo:     { flex: 1 },
-  eventTitle:    { color: colors.white, fontSize: fontSize.sm, fontWeight: '600' },
-  eventTime:     { color: colors.muted, fontSize: fontSize.xs, marginTop: 2 },
-  modalOverlay:  { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
-  modalCard:     { backgroundColor: colors.surface, borderTopLeftRadius: radius.modal, borderTopRightRadius: radius.modal, padding: spacing.xl, gap: spacing.md },
-  modalTitle:    { color: colors.white, fontSize: fontSize.xl, fontWeight: '800', marginBottom: spacing.sm },
-  input:         { backgroundColor: colors.primary, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, color: colors.white, paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: fontSize.base },
-  switchRow:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  switchLabel:   { color: colors.white, fontSize: fontSize.base },
-  modalButtons:  { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
-  cancelBtn:     { flex: 1, paddingVertical: spacing.md, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
-  cancelText:    { color: colors.muted, fontSize: fontSize.base },
-  saveBtn:       { flex: 1, paddingVertical: spacing.md, borderRadius: radius.pill, backgroundColor: colors.accent, alignItems: 'center' },
-  saveText:      { color: colors.primary, fontSize: fontSize.base, fontWeight: '700' },
+const s = StyleSheet.create({
+  safe:         { flex: 1, backgroundColor: colors.primary },
+  header:       { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  headerLogoClip: { width: 32, height: 32 },
+  headerLogo:     { width: 32, height: 32 },
+  headerTitle:  { color: colors.white, fontSize: fontSize.xxl, fontWeight: '800' },
+  addEntryBtn:  { position: 'absolute', bottom: spacing.xl, right: spacing.xl, backgroundColor: colors.primary, borderRadius: 24, paddingVertical: 12, paddingHorizontal: spacing.xl, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
+  addEntryText: { color: colors.white, fontSize: fontSize.base, fontWeight: '600' },
+  dayPanel:     { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: spacing.xl, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 6 },
+  dayPanelTitle:{ fontSize: fontSize.lg, fontWeight: '700', color: '#1A1A1A', marginBottom: spacing.md },
+  eventRow:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 4 },
+  eventDot:     { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
+  eventTitle:   { flex: 1, fontSize: fontSize.sm, color: '#1A1A1A' },
+  eventTime:    { fontSize: fontSize.xs, color: '#888' },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
+  modalCard:    { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.xl, maxHeight: '90%' },
+  modalTitle:   { fontSize: fontSize.xl, fontWeight: '800', color: '#1A1A1A', marginBottom: spacing.xs },
+  fieldLabel:   { fontSize: fontSize.sm, fontWeight: '700', color: '#1A1A1A' },
+  fieldSub:     { fontSize: fontSize.xs, color: '#888', marginTop: -spacing.xs },
+  fieldRow:     { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EBEBEB', borderRadius: 10, paddingHorizontal: spacing.md, paddingVertical: spacing.md, gap: spacing.sm },
+  fieldInput:   { flex: 1, fontSize: fontSize.sm, color: '#1A1A1A' },
+  fieldBox:     { backgroundColor: '#EBEBEB', borderRadius: 10, paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: fontSize.sm, color: '#1A1A1A' },
+  switchRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  switchLabel:  { fontSize: fontSize.base, color: '#1A1A1A' },
+  modalBtns:    { flexDirection: 'row', gap: spacing.md },
+  saveBtn:      { flex: 1, backgroundColor: colors.primary, borderRadius: 10, paddingVertical: spacing.md, alignItems: 'center' },
+  saveBtnText:  { color: '#fff', fontSize: fontSize.base, fontWeight: '700' },
+  cancelBtn:    { flex: 1, backgroundColor: '#D0D0D0', borderRadius: 10, paddingVertical: spacing.md, alignItems: 'center' },
+  cancelBtnText:{ color: '#1A1A1A', fontSize: fontSize.base, fontWeight: '600' },
 });

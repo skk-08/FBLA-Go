@@ -16,7 +16,7 @@ export function usePlannerViewModel() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) { setLoading(false); return; }
     setLoading(true);
     try {
       const data = await fetchCalendarEvents(user.id, profile?.chapter_id || null);
@@ -50,7 +50,7 @@ export function usePlannerViewModel() {
         chapter_id: profile?.chapter_id,
       });
       setEvents((prev) => [...prev, ev]);
-      if (!isShared) await createTodo(user.id, newTitle.trim(), selected);
+      if (isShared) await createTodo(user.id, newTitle.trim(), selected);
       setModalVisible(false);
       setNewTitle('');
       setNewTime('');

@@ -12,17 +12,13 @@ export function useSettingsViewModel() {
     router.replace('/(auth)/login');
   }
 
-  function goToOnboarding() {
-    router.push('/onboarding');
-  }
-
   function goToProfile() {
-    router.push('/profile');
+    router.push('/(tabs)/profile');
   }
 
   function goToNotifications() {
-    router.push('/notifications');
+    router.push('/(tabs)/notifications');
   }
 
-  return { handleSignOut, goToOnboarding, goToProfile, goToNotifications };
+  return { handleSignOut, goToProfile, goToNotifications };
 }

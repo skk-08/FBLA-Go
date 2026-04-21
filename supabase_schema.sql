@@ -43,6 +43,10 @@ create table if not exists public.profiles (
   chapter_name        text,
   chapter_id          uuid,
   grade               int check (grade between 9 and 12),
+  role                text default 'member',
+  bio                 text,
+  interests           text[] default '{}',
+  links               jsonb default '{}',
   photo_url           text,
   member_id_url       text,
   onboarding_complete boolean default false,
@@ -50,6 +54,9 @@ create table if not exists public.profiles (
   updated_at          timestamptz default now()
 );
 alter table public.profiles enable row level security;
+
+-- Migration for existing databases: add links column if missing
+alter table public.profiles add column if not exists links jsonb default '{}';
 
 create policy "Profile owner full access"
   on public.profiles for all using (auth.uid() = user_id);
@@ -295,3 +302,10 @@ insert into public.events (name, category, description, competition_date) values
   ('Sports & Entertainment Management', 'Business Admin','Apply business management principles to a sports or entertainment scenario.', '2026-04-15'),
   ('Website Design',            'Technology',           'Design and build a functional website for an assigned topic judged on design, usability, and content.', '2026-04-15')
 on conflict do nothing;
+
+
+-- ── Migration: add columns to existing profiles table ─────────
+-- Run these if you applied the schema before 2026-04-20
+alter table public.profiles add column if not exists role      text    default 'member';
+alter table public.profiles add column if not exists bio       text;
+alter table public.profiles add column if not exists interests text[]  default '{}';

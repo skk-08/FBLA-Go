@@ -1,111 +1,145 @@
-import { View, Text, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { useState } from 'react';
+import {
+  View, Text, Image, ScrollView, TextInput, Pressable, StyleSheet, Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize, spacing, radius } from '../../constants/theme';
-import { useMyEventViewModel } from '../../viewmodels/useMyEventViewModel';
-import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import ErrorBanner from '../../components/ui/ErrorBanner';
+import { colors, fontSize, spacing } from '../../constants/theme';
+import { useUIStore } from '../../store/uiStore';
 
-function EventCard({ event, isRegistered }) {
-  return (
-    <View style={[styles.eventCard, isRegistered && styles.registeredCard]}>
-      <View style={styles.eventHeader}>
-        <Ionicons
-          name={isRegistered ? 'ribbon' : 'ribbon-outline'}
-          size={20}
-          color={isRegistered ? colors.accent : colors.muted}
-        />
-        <Text style={[styles.eventName, isRegistered && styles.registeredName]}>{event.name}</Text>
-      </View>
-      {event.category && (
-        <Text style={styles.category}>{event.category}</Text>
-      )}
-      {event.description && (
-        <Text style={styles.description} numberOfLines={3}>{event.description}</Text>
-      )}
-      {event.rubric_url && (
-        <View style={styles.rubricRow}>
-          <Ionicons name="document-text-outline" size={14} color={colors.accent} />
-          <Text style={styles.rubricText}>Rubric available</Text>
-        </View>
-      )}
-      {event.competition_date && (
-        <View style={styles.dateRow}>
-          <Ionicons name="calendar-outline" size={14} color={colors.muted} />
-          <Text style={styles.dateText}>{event.competition_date}</Text>
-        </View>
-      )}
-    </View>
-  );
-}
+const LOGO = require('../../assets/fblago-logo.png');
+
+const EVENTS = [
+  {
+    id: '1',
+    name: 'Business & Management-\nObjective Test',
+    conference: '2026 State Leadership Conference',
+    dates: 'April 21-April 24, 2026 | Spokane, WA',
+    score: '67/100',
+  },
+  {
+    id: '2',
+    name: 'Event Planning-\nPresentation Event',
+    conference: '2026 State Leadership Conference',
+    dates: 'April 21-April 24, 2026 | Spokane, WA',
+    score: '91/100',
+  },
+  {
+    id: '3',
+    name: 'Business Plan-\nPresentation Event',
+    conference: '2026 State Leadership Conference',
+    dates: 'April 21-April 24, 2026 | Spokane, WA',
+    score: '92/100',
+  },
+];
 
 export default function MyEventScreen() {
-  const { userEvents, filteredEvents, search, setSearch, loading, error } = useMyEventViewModel();
-  const registeredIds = new Set(userEvents.map((ue) => ue.event_id));
+  const { isDarkMode } = useUIStore();
+  const dark = isDarkMode;
+  const [activeTab, setActiveTab] = useState('current');
+  const [search, setSearch] = useState('');
+
+  const filtered = EVENTS.filter((e) =>
+    e.name.toLowerCase().replace('\n', ' ').includes(search.toLowerCase())
+  );
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Event</Text>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.header}>
+        <View style={s.headerLogoClip}><Image source={LOGO} style={s.headerLogo} resizeMode="contain" /></View>
+        <Text style={s.headerTitle}>Event Details</Text>
       </View>
 
-      {loading ? <LoadingSpinner /> : (
-        <ScrollView contentContainerStyle={styles.scroll}>
-          {error && <ErrorBanner message={error} />}
+      <View style={{ flex: 1, backgroundColor: dark ? '#121212' : '#fff' }}>
+        {/* Search */}
+        <View style={[s.searchWrap, dark && { backgroundColor: '#2A2A2A' }]}>
+          <Ionicons name="search-outline" size={16} color="#999" />
+          <TextInput
+            style={[s.searchInput, dark && { color: '#eee' }]}
+            placeholder="Search event name, city, state, or region"
+            placeholderTextColor="#888"
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
 
-          {userEvents.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Registered Events</Text>
-              {userEvents.map((ue) => (
-                <EventCard key={ue.id} event={ue.events ?? {}} isRegistered />
-              ))}
+        {/* Tabs */}
+        <View style={[s.tabRow, dark && { borderBottomColor: '#333' }]}>
+          <Pressable onPress={() => setActiveTab('current')} style={s.tabWrap}>
+            <Text style={[s.tabText, activeTab === 'current' && s.tabActive, dark && { color: activeTab === 'current' ? colors.primary : '#666' }]}>
+              Current Events
+            </Text>
+            {activeTab === 'current' && <View style={s.underline} />}
+          </Pressable>
+          <Pressable onPress={() => setActiveTab('scores')} style={s.tabWrap}>
+            <Text style={[s.tabText, activeTab === 'scores' && s.tabActive, dark && { color: activeTab === 'scores' ? colors.primary : '#666' }]}>
+              Scores
+            </Text>
+            {activeTab === 'scores' && <View style={s.underline} />}
+          </Pressable>
+        </View>
+
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: 40 }}>
+          <Text style={s.dateLabel}>April 2026</Text>
+
+          {filtered.map((ev) => (
+            <View key={ev.id} style={[s.card, dark && { backgroundColor: '#1E1E1E' }]}>
+              <Text style={[s.eventName, dark && { color: '#eee' }]}>{ev.name}</Text>
+
+              {activeTab === 'current' ? (
+                <>
+                  <Text style={[s.conference, dark && { color: '#ccc' }]}>{ev.conference}</Text>
+                  <View style={s.cardFooter}>
+                    <Text style={[s.dates, dark && { color: '#aaa' }]}>{ev.dates}</Text>
+                    <Pressable
+                      style={s.actionBtn}
+                      onPress={() => Alert.alert('Check In', `Checking in to ${ev.name.replace('\n', ' ')}`)}
+                    >
+                      <Text style={s.actionText}>Check In</Text>
+                    </Pressable>
+                  </View>
+                </>
+              ) : (
+                <View style={s.cardFooter}>
+                  <Text style={s.score}>{ev.score}</Text>
+                  <Pressable style={s.actionBtn}>
+                    <Text style={s.actionText}>more</Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
+          ))}
+
+          {filtered.length === 0 && (
+            <Text style={s.empty}>No events found</Text>
           )}
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>All FBLA Events</Text>
-            <View style={styles.searchBar}>
-              <Ionicons name="search-outline" size={18} color={colors.muted} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search events…"
-                placeholderTextColor={colors.muted}
-                value={search}
-                onChangeText={setSearch}
-              />
-            </View>
-            {filteredEvents.length === 0 && (
-              <Text style={styles.empty}>No events found</Text>
-            )}
-            {filteredEvents.map((ev) => (
-              <EventCard key={ev.id} event={ev} isRegistered={registeredIds.has(ev.id)} />
-            ))}
-          </View>
         </ScrollView>
-      )}
+      </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safe:           { flex: 1, backgroundColor: colors.primary },
-  header:         { paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-  headerTitle:    { color: colors.white, fontSize: fontSize.xl, fontWeight: '800' },
-  scroll:         { padding: spacing.xl, paddingBottom: spacing.xxl },
-  section:        { marginBottom: spacing.xl },
-  sectionTitle:   { color: colors.accent, fontSize: fontSize.sm, fontWeight: '700', marginBottom: spacing.md, letterSpacing: 1, textTransform: 'uppercase' },
-  searchBar:      { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.md, marginBottom: spacing.md, gap: spacing.sm },
-  searchInput:    { flex: 1, color: colors.white, fontSize: fontSize.sm, paddingVertical: spacing.md },
-  eventCard:      { backgroundColor: colors.surface, borderRadius: radius.card, borderWidth: 1, borderColor: colors.border, padding: spacing.lg, marginBottom: spacing.md },
-  registeredCard: { borderColor: colors.accent },
-  eventHeader:    { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
-  eventName:      { color: colors.white, fontSize: fontSize.base, fontWeight: '700', flex: 1 },
-  registeredName: { color: colors.accent },
-  category:       { color: colors.muted, fontSize: fontSize.xs, marginBottom: spacing.xs },
-  description:    { color: colors.muted, fontSize: fontSize.sm, lineHeight: 20, marginBottom: spacing.sm },
-  rubricRow:      { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  rubricText:     { color: colors.accent, fontSize: fontSize.xs },
-  dateRow:        { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
-  dateText:       { color: colors.muted, fontSize: fontSize.xs },
-  empty:          { color: colors.muted, fontSize: fontSize.sm, textAlign: 'center', paddingVertical: spacing.lg },
+const s = StyleSheet.create({
+  safe:        { flex: 1, backgroundColor: colors.primary },
+  header:      { backgroundColor: colors.primary, paddingHorizontal: spacing.xl, paddingVertical: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  headerLogoClip: { width: 32, height: 32 },
+  headerLogo:     { width: 32, height: 32 },
+  headerTitle: { color: '#fff', fontSize: fontSize.xxl, fontWeight: '800' },
+  searchWrap:  { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EBEBEB', borderRadius: 24, marginHorizontal: spacing.lg, marginVertical: spacing.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs },
+  searchInput: { flex: 1, fontSize: fontSize.sm, color: '#1A1A1A' },
+  tabRow:      { flexDirection: 'row', paddingHorizontal: spacing.xl, borderBottomWidth: 1, borderBottomColor: '#E0E0E0' },
+  tabWrap:     { marginRight: spacing.xl, paddingBottom: spacing.sm, position: 'relative' },
+  tabText:     { fontSize: fontSize.base, color: '#888', fontWeight: '600' },
+  tabActive:   { color: colors.primary },
+  underline:   { position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, backgroundColor: colors.primary },
+  dateLabel:   { color: colors.error, fontSize: fontSize.sm, fontWeight: '700', marginBottom: spacing.xs },
+  card:        { backgroundColor: '#EBEBEB', borderRadius: 12, padding: spacing.lg },
+  eventName:   { fontSize: fontSize.base, fontWeight: '800', color: '#1A1A1A', marginBottom: spacing.xs },
+  conference:  { fontSize: fontSize.sm, fontWeight: '600', color: '#1A1A1A', marginBottom: 4 },
+  cardFooter:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm },
+  dates:       { fontSize: fontSize.xs, color: '#666', flex: 1, flexWrap: 'wrap' },
+  score:       { fontSize: fontSize.lg, fontWeight: '700', color: colors.error },
+  actionBtn:   { backgroundColor: colors.primary, borderRadius: 20, paddingVertical: 8, paddingHorizontal: spacing.lg },
+  actionText:  { color: '#fff', fontSize: fontSize.sm, fontWeight: '600' },
+  empty:       { textAlign: 'center', color: '#888', paddingTop: 40, fontSize: fontSize.sm },
 });

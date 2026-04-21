@@ -31,6 +31,19 @@ export async function createProfile(userId, profileData) {
   return data;
 }
 
+export async function upsertProfile(userId, profileData) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .upsert(
+      { user_id: userId, ...profileData, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function uploadMemberID(userId, uri) {
   const ext      = uri.split('.').pop();
   const path     = `${userId}/member-id.${ext}`;
@@ -44,14 +57,4 @@ export async function uploadMemberID(userId, uri) {
 
   const { data } = supabase.storage.from('member-ids').getPublicUrl(path);
   return data.publicUrl;
-}
-
-export async function fetchUserRole(userId) {
-  const { data, error } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', userId)
-    .single();
-  if (error) throw error;
-  return data.role;
 }
