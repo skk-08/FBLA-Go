@@ -13,6 +13,13 @@ import { useUIStore } from '../../store/uiStore';
 import ErrorBanner from '../../components/ui/ErrorBanner';
 import { colors, spacing, radius, fontSize } from '../../constants/theme';
 
+const ROLE_LABELS = {
+  member:    'Member',
+  officer:   'Officer',
+  executive: 'Executive',
+  advisor:   'Advisor',
+};
+
 const LOGO = require('../../assets/fblago-logo.png');
 
 const INTERESTS = [
@@ -261,20 +268,20 @@ export default function SignupScreen() {
 
               {/* Role selector */}
               <Pressable style={s.roleRow} onPress={() => setRolePickerOpen((v) => !v)}>
-                <Text style={[s.rolePlaceholder, role !== 'member' && { color: '#1A1A1A' }]}>
-                  {role ? role : 'role (member/officer/advisor)'}
+                <Text style={[s.rolePlaceholder, role && { color: '#1A1A1A' }]}>
+                  {role ? ROLE_LABELS[role] : 'Role (Member / Officer / Executive / Advisor)'}
                 </Text>
                 <Ionicons name="chevron-down" size={18} color="#888" />
               </Pressable>
               {rolePickerOpen && (
                 <View style={s.roleOptions}>
-                  {['member', 'officer', 'advisor'].map((r) => (
+                  {Object.entries(ROLE_LABELS).map(([r, label]) => (
                     <Pressable
                       key={r}
                       style={[s.roleOption, role === r && { backgroundColor: '#B0B8D0' }]}
                       onPress={() => { setRole(r); setRolePickerOpen(false); }}
                     >
-                      <Text style={s.roleOptionText}>{r}</Text>
+                      <Text style={s.roleOptionText}>{label}</Text>
                     </Pressable>
                   ))}
                 </View>
