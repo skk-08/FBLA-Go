@@ -82,6 +82,7 @@ export function useSignupViewModel() {
   const [school,      setSchool]      = useState('');
   const [role,        setRole]        = useState('member');
   const [roleCode,    setRoleCode]    = useState('');
+  const [otp,         setOtp]         = useState('');
   const [email,       setEmail]       = useState('');
   const [password,    setPassword]    = useState('');
   const [confirm,     setConfirm]     = useState('');
@@ -112,83 +113,77 @@ export function useSignupViewModel() {
     return Object.keys(e).length === 0;
   }
 
-  // Step 0 — validate credentials locally only, no Supabase call yet
-  function createAccount() {
-    return validateCredentials();
+  // Step 0 — create auth account and trigger OTP email
+  async function sendVerificationCode() {
+    if (!validateCredentials()) return false;
+    setIsLoading(true);
+    setServerError(null);
+    try {
+      const { error } = await supabase.auth.signUp({ email: email.trim(), password });
+      if (error) {
+        if (error.message.toLowerCase().includes('already registered')) {
+          setServerError('An account with this email already exists. Please log in instead.');
+        } else {
+          setServerError(error.message);
+        }
+        return false;
+      }
+      return true;
+    } catch {
+      setServerError('Could not send verification code. Please try again.');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   }
 
-  // Step 3 — create auth account + save full profile in one shot
+  // Step 1 — verify the 6-digit OTP sent to email
+  async function verifyEmailCode() {
+    setErrors({});
+    if (!otp.trim() || otp.trim().length !== 6) {
+      setErrors({ otp: 'Enter the 6-digit code from your email.' });
+      return false;
+    }
+    setIsLoading(true);
+    setServerError(null);
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: otp.trim(),
+        type:  'signup',
+      });
+      if (error) {
+        setServerError('Invalid or expired code. Check your email and try again.');
+        return false;
+      }
+      return true;
+    } catch {
+      setServerError('Verification failed. Please try again.');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Step 4 — save full profile (user is already authenticated via OTP)
   async function completeProfile(photoUri, interests) {
     if (!validateProfileFields()) return false;
     setIsLoading(true);
     setServerError(null);
     try {
-      // 1. Try to create the auth account
-      let userId;
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-      });
-
-      if (signUpError) {
-        // "Already registered" can happen if a previous signup attempt created
-        // the auth user but the profile save failed. Try signing in and
-        // recovering the incomplete profile rather than blocking the user.
-        if (signUpError.message.toLowerCase().includes('already registered')) {
-          const { data: signInData, error: signInError } =
-            await supabase.auth.signInWithPassword({ email: email.trim(), password });
-
-          if (signInError) {
-            // Wrong password — this is a genuine existing account conflict
-            setServerError('An account with this email already exists. Please log in instead.');
-            return false;
-          }
-
-          // fetchProfile throws PGRST116 if no row yet — treat that as incomplete
-          const existingProfile = await fetchProfile(signInData.user.id).catch(() => null);
-          if (existingProfile?.onboarding_complete) {
-            await supabase.auth.signOut();
-            setServerError('An account with this email already exists. Please log in instead.');
-            return false;
-          }
-
-          // Orphaned partial account — resume and finish setup
-          userId = signInData.user.id;
-        } else {
-          setServerError(signUpError.message);
-          return false;
-        }
-      } else {
-        if (!data.user) {
-          setServerError('Could not create account. Please try again.');
-          return false;
-        }
-        userId = data.user.id;
-
-        // If Supabase "Confirm email" is ON, signUp returns no session.
-        // Sign in immediately so the client is authenticated before upsertProfile.
-        if (!data.session) {
-          const { data: signInData, error: signInError } =
-            await supabase.auth.signInWithPassword({ email: email.trim(), password });
-          if (signInError) {
-            if (signInError.message.toLowerCase().includes('not confirmed')) {
-              setServerError('Check your inbox and confirm your email address, then tap Complete again.');
-            } else {
-              setServerError(signInError.message);
-            }
-            return false;
-          }
-          userId = signInData.user.id;
-        }
+      // 1. Get userId from the session created after OTP verification
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        setServerError('Session expired. Please restart signup.');
+        return false;
       }
+      const userId = currentUser.id;
 
-      // 2. Ensure public.users has this user's row (in case the DB trigger didn't run)
+      // 2. Ensure public.users has this user's row (DB trigger may have beat us)
       const { error: usersError } = await supabase
         .from('users')
         .upsert({ id: userId, email: email.trim() }, { onConflict: 'id' });
       if (usersError) {
-        // Non-fatal: row already exists (23505) or RLS blocked the insert because
-        // a DB trigger already created the row (42501 / row-level security policy)
         const nonFatal =
           usersError.code === '23505' ||
           usersError.code === '42501' ||
@@ -224,7 +219,7 @@ export function useSignupViewModel() {
         onboarding_complete: true,
       });
 
-      // 5. Save interests separately — column may not exist yet if migration hasn't run
+      // 5. Save interests separately
       if (interests?.length) {
         const { error: interestsError } = await supabase
           .from('profiles')
@@ -254,9 +249,10 @@ export function useSignupViewModel() {
   return {
     firstName, setFirstName, lastName, setLastName,
     school, setSchool, role, setRole, roleCode, setRoleCode,
+    otp, setOtp,
     email, setEmail,
     password, setPassword, confirm, setConfirm,
     errors, serverError, isLoading,
-    createAccount, completeProfile, validateProfileFields,
+    sendVerificationCode, verifyEmailCode, completeProfile, validateProfileFields,
   };
 }

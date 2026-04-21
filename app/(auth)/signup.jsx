@@ -154,9 +154,10 @@ export default function SignupScreen() {
   const {
     firstName, setFirstName, lastName, setLastName,
     school, setSchool, role, setRole, roleCode, setRoleCode,
+    otp, setOtp,
     email, setEmail, password, setPassword, confirm, setConfirm,
     errors, serverError, isLoading,
-    createAccount, completeProfile, validateProfileFields,
+    sendVerificationCode, verifyEmailCode, completeProfile, validateProfileFields,
   } = useSignupViewModel();
 
   function toggleInterest(key) {
@@ -181,13 +182,19 @@ export default function SignupScreen() {
     if (!result.canceled) setPhotoUri(result.assets[0].uri);
   }
 
-  function handleStep0Next() {
-    if (createAccount()) setStep(1);
+  async function handleStep0Next() {
+    const ok = await sendVerificationCode();
+    if (ok) setStep(1);
   }
 
-  function handleStep1Next() {
+  async function handleVerifyNext() {
+    const ok = await verifyEmailCode();
+    if (ok) setStep(2);
+  }
+
+  function handleStep2Next() {
     if (!validateProfileFields()) return;
-    setStep(2);
+    setStep(3);
   }
 
   async function handleComplete() {
@@ -238,7 +245,7 @@ export default function SignupScreen() {
               <PasswordMatch password={password} confirm={confirm} />
 
               <View style={s.btnRow}>
-                <YellowButton title="Next" onPress={handleStep0Next} loading={isLoading} />
+                <YellowButton title="Send Verification Code" onPress={handleStep0Next} loading={isLoading} />
               </View>
 
               <View style={s.loginLink}>
@@ -250,8 +257,42 @@ export default function SignupScreen() {
             </>
           )}
 
-          {/* ── STEP 1/3: Create Your Profile ─────────────────────────────── */}
+          {/* ── STEP 1: Email Verification ─────────────────────────────────── */}
           {step === 1 && (
+            <>
+              <Text style={[s.stepTitle, { fontSize: 26 }]}>Verify Your Email</Text>
+              <Text style={s.verifySubtitle}>
+                We sent a 6-digit code to{'\n'}
+                <Text style={{ color: colors.accent, fontWeight: '700' }}>{email}</Text>
+              </Text>
+              <ErrorBanner message={serverError} />
+
+              <TextInput
+                style={s.otpInput}
+                placeholder="000000"
+                placeholderTextColor="#888"
+                value={otp}
+                onChangeText={(t) => setOtp(t.replace(/[^0-9]/g, '').slice(0, 6))}
+                keyboardType="number-pad"
+                maxLength={6}
+                textAlign="center"
+              />
+              {errors.otp ? <Text style={[s.err, { textAlign: 'center' }]}>{errors.otp}</Text> : null}
+
+              <View style={s.btnRow}>
+                <YellowButton title="Verify" onPress={handleVerifyNext} loading={isLoading} />
+              </View>
+
+              <Pressable onPress={handleStep0Next} style={{ alignItems: 'center', marginTop: spacing.md }}>
+                <Text style={{ color: colors.white, fontSize: fontSize.sm, textDecorationLine: 'underline', opacity: 0.7 }}>
+                  Resend code
+                </Text>
+              </Pressable>
+            </>
+          )}
+
+          {/* ── STEP 2: Create Your Profile (1/3) ─────────────────────────── */}
+          {step === 2 && (
             <>
               <Text style={[s.stepTitle, { fontSize: 26 }]}>Create Your Profile</Text>
               <ErrorBanner message={serverError} />
@@ -303,14 +344,14 @@ export default function SignupScreen() {
               )}
 
               <View style={s.btnRow}>
-                <YellowButton title="Next" onPress={handleStep1Next} />
+                <YellowButton title="Next" onPress={handleStep2Next} />
                 <Text style={s.counter}>1/3</Text>
               </View>
             </>
           )}
 
-          {/* ── STEP 2/3: Add Photo ────────────────────────────────────────── */}
-          {step === 2 && (
+          {/* ── STEP 3: Add Photo (2/3) ────────────────────────────────────── */}
+          {step === 3 && (
             <>
               <Text style={[s.stepTitle, { textAlign: 'center' }]}>Add Photo</Text>
 
@@ -337,11 +378,11 @@ export default function SignupScreen() {
               </Pressable>
 
               <View style={s.btnRow}>
-                <YellowButton title="Next" onPress={() => setStep(3)} />
+                <YellowButton title="Next" onPress={() => setStep(4)} />
                 <Text style={s.counter}>2/3</Text>
               </View>
 
-              <Pressable onPress={() => setStep(3)} style={{ alignItems: 'center', marginTop: spacing.md }}>
+              <Pressable onPress={() => setStep(4)} style={{ alignItems: 'center', marginTop: spacing.md }}>
                 <Text style={{ color: colors.white, fontSize: fontSize.sm, textDecorationLine: 'underline', opacity: 0.7 }}>
                   Skip this step
                 </Text>
@@ -349,8 +390,8 @@ export default function SignupScreen() {
             </>
           )}
 
-          {/* ── STEP 3/3: Personalize & Interests ─────────────────────────── */}
-          {step === 3 && (
+          {/* ── STEP 4: Personalize & Interests (3/3) ─────────────────────── */}
+          {step === 4 && (
             <>
               <Text style={[s.stepTitle, { textAlign: 'center', fontSize: 24 }]}>
                 Personalize Your Interests
@@ -413,6 +454,8 @@ const s = StyleSheet.create({
   yellowBtnText:    { color: '#1A1A1A', fontWeight: '700', fontSize: fontSize.base, textAlign: 'center' },
   counter:          { color: colors.white, fontSize: fontSize.base },
 
+  verifySubtitle:   { color: colors.white, fontSize: fontSize.base, lineHeight: 24, marginBottom: spacing.xxl, opacity: 0.85 },
+  otpInput:         { backgroundColor: '#D9D9D9', borderRadius: 12, paddingVertical: 20, fontSize: 32, fontWeight: '700', color: '#1A1A1A', marginBottom: spacing.md, letterSpacing: 12, textAlign: 'center' },
   emailNote:        { color: colors.muted, fontSize: fontSize.xs, lineHeight: 18, marginBottom: spacing.md, paddingHorizontal: spacing.xs },
   passwordWarning:  { color: colors.accent, fontSize: fontSize.xs, lineHeight: 18, marginBottom: spacing.sm, paddingHorizontal: spacing.xs, fontWeight: '600' },
   strengthBox:      { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: spacing.md, marginBottom: spacing.md, gap: 6 },
