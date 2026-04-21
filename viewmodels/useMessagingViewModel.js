@@ -64,7 +64,7 @@ export function useMessagingViewModel() {
     });
   }
 
-  const isAdmin = role === 'adviser' || role === 'admin';
+  const isAdmin = role === 'advisor';
 
   return { messages, draft, setDraft, send, deleteMessage, loading, sending, isAdmin, userId: user?.id };
 }

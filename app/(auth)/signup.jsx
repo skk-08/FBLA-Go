@@ -15,7 +15,6 @@ import { colors, spacing, radius, fontSize } from '../../constants/theme';
 
 const ROLE_LABELS = {
   member:    'Member',
-  officer:   'Officer',
   executive: 'Executive',
   advisor:   'Advisor',
 };
@@ -154,7 +153,7 @@ export default function SignupScreen() {
 
   const {
     firstName, setFirstName, lastName, setLastName,
-    school, setSchool, role, setRole,
+    school, setSchool, role, setRole, roleCode, setRoleCode,
     email, setEmail, password, setPassword, confirm, setConfirm,
     errors, serverError, isLoading,
     createAccount, completeProfile, validateProfileFields,
@@ -269,7 +268,7 @@ export default function SignupScreen() {
               {/* Role selector */}
               <Pressable style={s.roleRow} onPress={() => setRolePickerOpen((v) => !v)}>
                 <Text style={[s.rolePlaceholder, role && { color: '#1A1A1A' }]}>
-                  {role ? ROLE_LABELS[role] : 'Role (Member / Officer / Executive / Advisor)'}
+                  {role ? ROLE_LABELS[role] : 'Role (Member / Executive / Advisor)'}
                 </Text>
                 <Ionicons name="chevron-down" size={18} color="#888" />
               </Pressable>
@@ -285,6 +284,22 @@ export default function SignupScreen() {
                     </Pressable>
                   ))}
                 </View>
+              )}
+
+              {/* Role code — only shown for executive / advisor */}
+              {(role === 'executive' || role === 'advisor') && (
+                <>
+                  <TextInput
+                    style={s.input}
+                    placeholder="Enter your role access code"
+                    placeholderTextColor="#888"
+                    value={roleCode}
+                    onChangeText={setRoleCode}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  {errors.roleCode ? <Text style={s.err}>{errors.roleCode}</Text> : null}
+                </>
               )}
 
               <View style={s.btnRow}>

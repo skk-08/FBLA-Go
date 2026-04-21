@@ -71,7 +71,7 @@ export default function ChapterAnnouncementsScreen() {
   const [newBody, setNewBody] = useState('');
   const [posting, setPosting] = useState(false);
 
-  const isPrivileged = profile?.role === 'officer' || profile?.role === 'advisor';
+  const isPrivileged = profile?.role === 'executive' || profile?.role === 'advisor';
 
   useEffect(() => {
     if (!profile?.chapter_id) return;

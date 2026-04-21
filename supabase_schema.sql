@@ -7,7 +7,7 @@
 create table if not exists public.users (
   id        uuid primary key references auth.users(id) on delete cascade,
   email     text not null,
-  role      text not null default 'member' check (role in ('member','adviser','admin')),
+  role      text not null default 'member' check (role in ('member','executive','advisor')),
   created_at timestamptz default now()
 );
 alter table public.users enable row level security;
@@ -135,12 +135,12 @@ create policy "Chapter members can read announcements"
     )
   );
 
-create policy "Advisers/admins can insert announcements"
+create policy "Executives/advisors can insert announcements"
   on public.announcements for insert
   with check (
     exists (
-      select 1 from public.users
-      where id = auth.uid() and role in ('adviser','admin')
+      select 1 from public.profiles
+      where user_id = auth.uid() and role in ('executive','advisor')
     )
   );
 
@@ -221,12 +221,12 @@ create policy "Chapter members can insert messages"
     )
   );
 
-create policy "Advisers/admins can soft-delete messages"
+create policy "Advisors can soft-delete messages"
   on public.messages for update
   using (
     exists (
-      select 1 from public.users
-      where id = auth.uid() and role in ('adviser','admin')
+      select 1 from public.profiles
+      where user_id = auth.uid() and role = 'advisor'
     )
   );
 
@@ -257,21 +257,21 @@ create table if not exists public.admin_actions (
 );
 alter table public.admin_actions enable row level security;
 
-create policy "Advisers/admins can insert admin_actions"
+create policy "Advisors can insert admin_actions"
   on public.admin_actions for insert
   with check (
     exists (
-      select 1 from public.users
-      where id = auth.uid() and role in ('adviser','admin')
+      select 1 from public.profiles
+      where user_id = auth.uid() and role = 'advisor'
     )
   );
 
-create policy "Advisers/admins can read admin_actions"
+create policy "Advisors can read admin_actions"
   on public.admin_actions for select
   using (
     exists (
-      select 1 from public.users
-      where id = auth.uid() and role in ('adviser','admin')
+      select 1 from public.profiles
+      where user_id = auth.uid() and role = 'advisor'
     )
   );
 
@@ -309,3 +309,89 @@ on conflict do nothing;
 alter table public.profiles add column if not exists role      text    default 'member';
 alter table public.profiles add column if not exists bio       text;
 alter table public.profiles add column if not exists interests text[]  default '{}';
+
+
+-- ── Migration 2026-04-20: role system overhaul ────────────────
+-- 1. Drop old role check constraint and recreate with new roles
+alter table public.users drop constraint if exists users_role_check;
+alter table public.users add constraint users_role_check
+  check (role in ('member','executive','advisor'));
+
+-- 2. Drop old RLS policies that referenced 'adviser'/'admin'
+drop policy if exists "Advisers/admins can insert announcements" on public.announcements;
+drop policy if exists "Advisers/admins can soft-delete messages" on public.messages;
+drop policy if exists "Advisers/admins can insert admin_actions" on public.admin_actions;
+drop policy if exists "Advisers/admins can read admin_actions"   on public.admin_actions;
+
+-- 3. Recreate policies with new role names
+create policy "Executives/advisors can insert announcements"
+  on public.announcements for insert
+  with check (
+    exists (
+      select 1 from public.profiles
+      where user_id = auth.uid() and role in ('executive','advisor')
+    )
+  );
+
+create policy "Advisors can soft-delete messages"
+  on public.messages for update
+  using (
+    exists (
+      select 1 from public.profiles
+      where user_id = auth.uid() and role = 'advisor'
+    )
+  );
+
+create policy "Advisors can insert admin_actions"
+  on public.admin_actions for insert
+  with check (
+    exists (
+      select 1 from public.profiles
+      where user_id = auth.uid() and role = 'advisor'
+    )
+  );
+
+create policy "Advisors can read admin_actions"
+  on public.admin_actions for select
+  using (
+    exists (
+      select 1 from public.profiles
+      where user_id = auth.uid() and role = 'advisor'
+    )
+  );
+
+-- 4. chapter_codes: stores invite codes per chapter for role verification
+create table if not exists public.chapter_codes (
+  id             uuid primary key default gen_random_uuid(),
+  chapter_name   text not null unique,
+  executive_code text,
+  advisor_code   text,
+  created_at     timestamptz default now()
+);
+alter table public.chapter_codes enable row level security;
+
+create policy "Authenticated users can read chapter_codes"
+  on public.chapter_codes for select using (auth.role() = 'authenticated');
+
+create policy "Advisors can update chapter_codes"
+  on public.chapter_codes for update
+  using (
+    exists (
+      select 1 from public.profiles
+      where user_id = auth.uid() and role = 'advisor'
+    )
+  );
+
+create policy "Advisors can insert chapter_codes"
+  on public.chapter_codes for insert
+  with check (
+    exists (
+      select 1 from public.profiles
+      where user_id = auth.uid() and role = 'advisor'
+    )
+  );
+
+-- 5. Seed example chapter codes (update with your real chapter name and codes)
+-- insert into public.chapter_codes (chapter_name, executive_code, advisor_code)
+-- values ('Your Chapter Name', 'exec2026', 'adv2026')
+-- on conflict (chapter_name) do nothing;

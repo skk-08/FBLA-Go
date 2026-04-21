@@ -81,6 +81,7 @@ export function useSignupViewModel() {
   const [lastName,    setLastName]    = useState('');
   const [school,      setSchool]      = useState('');
   const [role,        setRole]        = useState('member');
+  const [roleCode,    setRoleCode]    = useState('');
   const [email,       setEmail]       = useState('');
   const [password,    setPassword]    = useState('');
   const [confirm,     setConfirm]     = useState('');
@@ -104,6 +105,9 @@ export function useSignupViewModel() {
     if (!firstName.trim()) e.firstName = 'First name is required.';
     if (!lastName.trim())  e.lastName  = 'Last name is required.';
     if (!school.trim())    e.school    = 'School is required.';
+    if ((role === 'executive' || role === 'advisor') && !roleCode.trim()) {
+      e.roleCode = 'Enter your role access code.';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -196,16 +200,31 @@ export function useSignupViewModel() {
         }
       }
 
-      // 3. Save profile and mark onboarding complete
+      // 3. Validate role code for executive/advisor signups
+      let verifiedRole = role || 'member';
+      if (role === 'executive' || role === 'advisor') {
+        const { data: codes } = await supabase
+          .from('chapter_codes')
+          .select('executive_code, advisor_code')
+          .ilike('chapter_name', school.trim())
+          .single();
+        const expected = role === 'executive' ? codes?.executive_code : codes?.advisor_code;
+        if (!expected || roleCode.trim() !== expected) {
+          setServerError('Invalid role code. Ask your advisor for the correct code.');
+          return false;
+        }
+      }
+
+      // 4. Save profile and mark onboarding complete
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
       const savedProfile = await upsertProfile(userId, {
         full_name:           fullName,
         chapter_name:        school.trim(),
-        role:                role || 'member',
+        role:                verifiedRole,
         onboarding_complete: true,
       });
 
-      // Save interests separately — column may not exist yet if migration hasn't run
+      // 5. Save interests separately — column may not exist yet if migration hasn't run
       if (interests?.length) {
         const { error: interestsError } = await supabase
           .from('profiles')
@@ -216,7 +235,7 @@ export function useSignupViewModel() {
         }
       }
 
-      // 4. Update auth store so AuthGuard immediately sees onboarding_complete: true
+      // 6. Update auth store so AuthGuard immediately sees onboarding_complete: true
       useAuthStore.getState().setProfile(savedProfile);
       return true;
     } catch (err) {
@@ -234,7 +253,7 @@ export function useSignupViewModel() {
 
   return {
     firstName, setFirstName, lastName, setLastName,
-    school, setSchool, role, setRole,
+    school, setSchool, role, setRole, roleCode, setRoleCode,
     email, setEmail,
     password, setPassword, confirm, setConfirm,
     errors, serverError, isLoading,
