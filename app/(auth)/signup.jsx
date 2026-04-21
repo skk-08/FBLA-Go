@@ -192,8 +192,13 @@ export default function SignupScreen() {
     if (ok) setStep(2);
   }
 
-  function handleStep2Next() {
+  async function handleStep2Next() {
     if (!validateProfileFields()) return;
+    if (role === 'advisor') {
+      const ok = await completeProfile(null, []);
+      if (ok) router.replace('/(tabs)');
+      return;
+    }
     setStep(3);
   }
 
@@ -344,8 +349,12 @@ export default function SignupScreen() {
               )}
 
               <View style={s.btnRow}>
-                <YellowButton title="Next" onPress={handleStep2Next} />
-                <Text style={s.counter}>1/3</Text>
+                <YellowButton
+                  title={role === 'advisor' ? 'Complete Setup' : 'Next'}
+                  onPress={handleStep2Next}
+                  loading={isLoading}
+                />
+                {role !== 'advisor' && <Text style={s.counter}>1/3</Text>}
               </View>
             </>
           )}

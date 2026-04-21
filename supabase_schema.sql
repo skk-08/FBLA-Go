@@ -18,21 +18,9 @@ create policy "Users can read their own row"
 create policy "Users can update their own row"
   on public.users for update using (auth.uid() = id);
 
--- auto-insert on signup
-create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer as $$
-begin
-  insert into public.users(id, email)
-  values (new.id, new.email)
-  on conflict (id) do nothing;
-  return new;
-end;
-$$;
-
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+-- Users insert their own row after completing signup (no trigger — app does this)
+create policy "Users can insert their own row"
+  on public.users for insert with check (auth.uid() = id);
 
 
 -- ── 2. profiles ───────────────────────────────────────────────
@@ -61,26 +49,7 @@ alter table public.profiles add column if not exists links jsonb default '{}';
 create policy "Profile owner full access"
   on public.profiles for all using (auth.uid() = user_id);
 
--- auto-create profile on signup
-create or replace function public.handle_new_profile()
-returns trigger language plpgsql security definer as $$
-begin
-  insert into public.profiles(user_id, full_name, chapter_name, grade)
-  values (
-    new.id,
-    new.raw_user_meta_data->>'full_name',
-    new.raw_user_meta_data->>'chapter_name',
-    (new.raw_user_meta_data->>'grade')::int
-  )
-  on conflict (user_id) do nothing;
-  return new;
-end;
-$$;
-
-drop trigger if exists on_auth_user_created_profile on auth.users;
-create trigger on_auth_user_created_profile
-  after insert on auth.users
-  for each row execute procedure public.handle_new_profile();
+-- Profiles are created by the app after full signup completion (no trigger)
 
 
 -- ── 3. events (FBLA competitive events library) ───────────────
@@ -395,3 +364,19 @@ create policy "Advisors can insert chapter_codes"
 -- insert into public.chapter_codes (chapter_name, executive_code, advisor_code)
 -- values ('Your Chapter Name', 'exec2026', 'adv2026')
 -- on conflict (chapter_name) do nothing;
+
+
+-- ── Migration 2026-04-21: drop auto-create triggers, add users INSERT policy ──
+-- Run in Supabase Dashboard → SQL Editor
+
+-- Drop triggers that auto-created rows on auth signup
+drop trigger if exists on_auth_user_created         on auth.users;
+drop trigger if exists on_auth_user_created_profile on auth.users;
+drop function if exists public.handle_new_user()    cascade;
+drop function if exists public.handle_new_profile() cascade;
+
+-- Allow authenticated users to insert their own row into public.users
+-- (previously done by the trigger; now done by the app at signup completion)
+drop policy if exists "Users can insert their own row" on public.users;
+create policy "Users can insert their own row"
+  on public.users for insert with check (auth.uid() = id);
