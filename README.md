@@ -130,21 +130,21 @@ The app is divided into three independently testable modules:
 | # | Feature | Status |
 |---|---------|--------|
 | 1 | Login + Signup (input validation) | ✅ Built |
-| 2 | Onboarding (T&C + walkthrough) | ⬜ |
-| 3 | Dashboard (8 components) | ⬜ |
+| 2 | Onboarding (T&C + walkthrough) | ✅ Built |
+| 3 | Dashboard (8 components) | ✅ Built |
 | 4 | Navigation Bar (5 tabs) | ✅ Built |
-| 5 | Member Profile | ⬜ |
-| 6 | Settings | ⬜ |
-| 7 | Notifications | ⬜ |
-| 8 | Event Metric (countdown) | ⬜ |
-| 9 | To-Do List | ⬜ |
-| 10 | Event Info + Rubrics | ⬜ |
-| 11 | Chapter Announcements | ⬜ |
-| 12 | Member ID Upload (encrypted) | ⬜ |
-| 13 | FBLA Social Hub (Instagram WebView) | ⬜ |
-| 14 | In-App Messaging + Admin Moderation | ⬜ |
-| 15 | Interactive Planner + Shared Calendar | ⬜ |
-| 16 | My Event Page | ⬜ |
+| 5 | Member Profile | ✅ Built |
+| 6 | Settings | ✅ Built |
+| 7 | Notifications | ✅ Built |
+| 8 | Event Metric (countdown) | ✅ Built |
+| 9 | To-Do List | ✅ Built |
+| 10 | Event Info + Rubrics | ✅ Built |
+| 11 | Chapter Announcements | ✅ Built |
+| 12 | Member ID Upload (encrypted) | ✅ Built |
+| 13 | FBLA Social Hub (Instagram WebView) | ✅ Built |
+| 14 | In-App Messaging + Admin Moderation | ✅ Built |
+| 15 | Interactive Planner + Shared Calendar | ✅ Built |
+| 16 | My Event Page | ✅ Built |
 
 ---
 
@@ -174,7 +174,7 @@ Row-level security is enabled on all tables. Realtime is enabled on `messages`, 
 - Input validation on every form: **syntactical** (format/regex) + **semantic** (account exists, unique email, valid grade)
 - Role-based access control: `member`, `adviser`, `admin`
 - Admin moderation panel with soft-delete and audit logging
-- `.env` excluded from version control — credentials never committed
+- `.env` excluded from version control - credentials never committed
 
 ---
 
