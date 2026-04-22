@@ -61,7 +61,7 @@ export default function LoginScreen() {
 
         <View style={s.welcomeFooter}>
           <Text style={s.footerText}>
-            {"Didn't have an account? "}
+            {"Don't have an account? "}
             <Text
               style={s.footerLink}
               onPress={() => router.push('/(auth)/signup')}

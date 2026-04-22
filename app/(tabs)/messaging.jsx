@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const LOGO = require('../../assets/fblago-logo.png');
 import { colors, fontSize, spacing } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { useUIStore } from '../../store/uiStore';
 import { useMessagingViewModel } from '../../viewmodels/useMessagingViewModel';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -44,6 +45,15 @@ const PREVIEW = {
 };
 
 const CHAT_HISTORY = {
+  group: [
+    { id: 'gr1', body: 'Janine K: Are you guys free to call this Thursday to finalize marketing?', sender_id: 'other', sender_name: 'Janine K' },
+    { id: 'gr2', body: 'I can hop on after 6pm, just finishing up debate practice.', sender_id: 'other', sender_name: 'Marcus T' },
+    { id: 'gr3', body: 'Same here, 6pm works for me!', sender_id: 'other', sender_name: 'Priya S' },
+    { id: 'gr4', body: "I'll be there. Should we use the shared Google Doc for the agenda?", sender_id: 'me' },
+    { id: 'gr5', body: "Yes please! I'll drop the link in here before the call.", sender_id: 'other', sender_name: 'Janine K' },
+    { id: 'gr6', body: 'Reminder: bring your section drafts so we can review together.', sender_id: 'other', sender_name: 'Ms. Sullivan' },
+    { id: 'gr7', body: "Got it, I'll have the social media plan ready.", sender_id: 'me' },
+  ],
   or: [
     { id: 'or1', body: 'Hey! I had a question about the registration date.', sender_id: 'other' },
     { id: 'or2', body: 'Is it February 13th? What should I send out?', sender_id: 'other' },
@@ -74,23 +84,23 @@ const CHAT_HISTORY = {
   ],
 };
 
-function MessageBubble({ body, isMine, isAdmin, onLongPress, dark }) {
+function MessageBubble({ body, isMine, isAdmin, onLongPress, dark, t }) {
   return (
     <Pressable
       style={[s.bubbleRow, isMine && { justifyContent: 'flex-end' }]}
       onLongPress={onLongPress}
       delayLongPress={400}
     >
-      <View style={[isMine ? s.bubbleMine : s.bubbleOther, !isMine && dark && { backgroundColor: '#2A2A2A' }]}>
-        <Text style={[isMine ? s.bubbleMineText : s.bubbleOtherText, !isMine && dark && { color: '#eee' }]}>{body}</Text>
+      <View style={[isMine ? s.bubbleMine : s.bubbleOther, !isMine && dark && { backgroundColor: t.inputBg }]}>
+        <Text style={[isMine ? s.bubbleMineText : s.bubbleOtherText, !isMine && dark && { color: t.text }]}>{body}</Text>
       </View>
     </Pressable>
   );
 }
 
 export default function MessagingScreen() {
-  const { isDarkMode } = useUIStore();
-  const dark = isDarkMode;
+  const { colors: t, isDark } = useTheme();
+  const dark = isDark;
   const [activeContact, setActiveContact] = useState(null);
   const { messages, draft, setDraft, send, deleteMessage, loading, sending, isAdmin, userId } =
     useMessagingViewModel();
@@ -106,16 +116,16 @@ export default function MessagingScreen() {
         <FlatList
           data={CONTACTS}
           keyExtractor={(c) => c.id}
-          style={{ backgroundColor: dark ? '#121212' : '#fff' }}
+          style={{ backgroundColor: t.bg }}
           renderItem={({ item }) => (
-            <Pressable style={[s.convRow, dark && { backgroundColor: '#121212' }]} onPress={() => setActiveContact(item)}>
+            <Pressable style={[s.convRow, dark && { backgroundColor: t.bg }]} onPress={() => setActiveContact(item)}>
               <View style={{ position: 'relative' }}>
                 <Avatar label={item.initials} size={50} colorIdx={item.colorIdx} />
                 {item.unread && <View style={s.unreadDot} />}
               </View>
               <View style={s.convBody}>
-                <Text style={[s.convName, dark && { color: '#eee' }]}>{item.name}</Text>
-                <Text style={[s.convPreview, dark && { color: '#aaa' }]} numberOfLines={2}>
+                <Text style={[s.convName, dark && { color: t.text }]}>{item.name}</Text>
+                <Text style={[s.convPreview, dark && { color: t.textSecondary }]} numberOfLines={2}>
                   {item.id === 'group' && messages.length > 0
                     ? messages[messages.length - 1]?.body?.slice(0, 80) ?? PREVIEW[item.id]
                     : PREVIEW[item.id]}
@@ -124,7 +134,7 @@ export default function MessagingScreen() {
             </Pressable>
           )}
           ItemSeparatorComponent={() => (
-            <View style={{ height: 1, backgroundColor: dark ? '#2A2A2A' : '#E8E8E8', marginLeft: 78 }} />
+            <View style={{ height: 1, backgroundColor: dark ? t.hairline : '#E8E8E8', marginLeft: 78 }} />
           )}
         />
       </SafeAreaView>
@@ -161,19 +171,20 @@ export default function MessagingScreen() {
         >
           {isGroup ? (
             <FlatList
-              data={messages}
+              data={messages.length > 0 ? messages : CHAT_HISTORY.group}
               keyExtractor={(m) => m.id}
               renderItem={({ item }) => (
                 <MessageBubble
                   body={item.body}
-                  isMine={item.sender_id === userId}
+                  isMine={item.sender_id === userId || item.sender_id === 'me'}
                   isAdmin={isAdmin}
-                  onLongPress={() => handleLongPressGroup(item.id, item.profiles?.full_name ?? 'Member')}
+                  onLongPress={() => handleLongPressGroup(item.id, item.profiles?.full_name ?? item.sender_name ?? 'Member')}
                   dark={dark}
+                  t={t}
                 />
               )}
               contentContainerStyle={{ padding: spacing.lg, gap: spacing.xs, paddingBottom: spacing.md }}
-              style={{ backgroundColor: dark ? '#121212' : '#fff' }}
+              style={{ backgroundColor: t.bg }}
             />
           ) : (
             <FlatList
@@ -184,19 +195,20 @@ export default function MessagingScreen() {
                   body={item.body}
                   isMine={item.sender_id === 'me'}
                   dark={dark}
+                  t={t}
                 />
               )}
               contentContainerStyle={{ padding: spacing.lg, gap: spacing.xs, paddingBottom: spacing.md }}
-              style={{ backgroundColor: dark ? '#121212' : '#fff' }}
+              style={{ backgroundColor: t.bg }}
             />
           )}
 
-          <View style={[s.inputRow, dark && { backgroundColor: '#1E1E1E', borderTopColor: '#333' }]}>
+          <View style={[s.inputRow, dark && { backgroundColor: t.card, borderTopColor: t.hairline }]}>
             <Pressable style={s.plusBtn}>
-              <Ionicons name="add" size={22} color={colors.primary} />
+              <Ionicons name="add" size={22} color={dark ? t.accent : colors.primary} />
             </Pressable>
             <TextInput
-              style={[s.input, dark && { backgroundColor: '#2A2A2A', color: '#eee' }]}
+              style={[s.input, dark && { backgroundColor: t.inputBg, color: t.text }]}
               placeholder="Type a message"
               placeholderTextColor="#999"
               value={draft}

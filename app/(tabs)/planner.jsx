@@ -9,13 +9,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { CalendarList } from 'react-native-calendars';
 import { format, parseISO } from 'date-fns';
 import { colors, fontSize, spacing, radius } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { usePlannerViewModel } from '../../viewmodels/usePlannerViewModel';
-import { useUIStore } from '../../store/uiStore';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 
 export default function PlannerScreen() {
-  const { isDarkMode } = useUIStore();
-  const dark = isDarkMode;
+  const { colors: t, isDark } = useTheme();
+  const dark = isDark;
   const {
     selected, setSelected,
     markedDates, dayEvents,
@@ -28,7 +28,7 @@ export default function PlannerScreen() {
   } = usePlannerViewModel();
 
   return (
-    <SafeAreaView style={[s.safe, dark && { backgroundColor: '#0A1A3A' }]} edges={['top']}>
+    <SafeAreaView style={[s.safe, dark && { backgroundColor: t.bg }]} edges={['top']}>
       {/* Dark blue header */}
       <View style={s.header}>
         <View style={s.headerLogoClip}><Image source={LOGO} style={s.headerLogo} resizeMode="contain" /></View>
@@ -36,7 +36,7 @@ export default function PlannerScreen() {
       </View>
 
       {loading ? <LoadingSpinner /> : (
-        <View style={{ flex: 1, backgroundColor: dark ? '#121212' : '#fff' }}>
+        <View style={{ flex: 1, backgroundColor: t.bg }}>
           <CalendarList
             key={dark ? 'dark' : 'light'}
             current={selected}
@@ -50,17 +50,17 @@ export default function PlannerScreen() {
             showScrollIndicator
             horizontal={false}
             theme={{
-              backgroundColor: dark ? '#121212' : '#fff',
-              calendarBackground: dark ? '#121212' : '#fff',
-              textSectionTitleColor: dark ? '#aaa' : '#555',
+              backgroundColor: t.bg,
+              calendarBackground: t.bg,
+              textSectionTitleColor: t.textSecondary,
               selectedDayBackgroundColor: colors.primary,
               selectedDayTextColor: '#fff',
               todayTextColor: colors.primary,
-              dayTextColor: dark ? '#eee' : '#1A1A1A',
+              dayTextColor: t.text,
               dotColor: colors.accent,
-              monthTextColor: dark ? '#eee' : '#1A1A1A',
+              monthTextColor: t.text,
               arrowColor: colors.primary,
-              textDisabledColor: dark ? '#444' : '#ccc',
+              textDisabledColor: dark ? t.hairline : '#ccc',
               textDayFontWeight: '500',
               textMonthFontWeight: '700',
               textMonthFontSize: fontSize.lg,
@@ -76,14 +76,14 @@ export default function PlannerScreen() {
 
       {/* Day events panel */}
       {dayEvents.length > 0 && !modalVisible && (
-        <View style={[s.dayPanel, dark && { backgroundColor: '#1E1E1E' }]}>
-          <Text style={[s.dayPanelTitle, dark && { color: '#eee' }]}>
+        <View style={[s.dayPanel, dark && { backgroundColor: t.card }]}>
+          <Text style={[s.dayPanelTitle, dark && { color: t.text }]}>
             {format(new Date(selected + 'T12:00:00'), 'MMMM d')}
           </Text>
           {dayEvents.map((ev) => (
             <View key={ev.id} style={s.eventRow}>
               <View style={[s.eventDot, ev.is_shared && { backgroundColor: colors.success }]} />
-              <Text style={[s.eventTitle, dark && { color: '#eee' }]} numberOfLines={1}>{ev.title}</Text>
+              <Text style={[s.eventTitle, dark && { color: t.text }]} numberOfLines={1}>{ev.title}</Text>
               <Text style={s.eventTime}>
                 {ev.start_time ? format(parseISO(ev.start_time), 'h:mm a') : ''}
               </Text>
@@ -101,15 +101,15 @@ export default function PlannerScreen() {
           style={s.modalOverlay}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <ScrollView style={[s.modalCard, dark && { backgroundColor: '#1E1E1E' }]} contentContainerStyle={{ gap: spacing.md }}>
-            <Text style={[s.modalTitle, dark && { color: '#eee' }]}>Planner</Text>
+          <ScrollView style={[s.modalCard, dark && { backgroundColor: t.card }]} contentContainerStyle={{ gap: spacing.md }}>
+            <Text style={[s.modalTitle, dark && { color: t.text }]}>Planner</Text>
 
             {/* Activity Date */}
-            <Text style={[s.fieldLabel, dark && { color: '#eee' }]}>Activity Date</Text>
-            <View style={[s.fieldRow, dark && { backgroundColor: '#2A2A2A' }]}>
-              <Ionicons name="calendar-outline" size={20} color={dark ? '#aaa' : '#555'} />
+            <Text style={[s.fieldLabel, dark && { color: t.text }]}>Activity Date</Text>
+            <View style={[s.fieldRow, dark && { backgroundColor: t.inputBg }]}>
+              <Ionicons name="calendar-outline" size={20} color={dark ? t.textSecondary : '#555'} />
               <TextInput
-                style={[s.fieldInput, dark && { color: '#eee' }]}
+                style={[s.fieldInput, dark && { color: t.text }]}
                 placeholder="(month, day, year)"
                 placeholderTextColor="#888"
                 value={newTime}
@@ -118,9 +118,9 @@ export default function PlannerScreen() {
             </View>
 
             {/* Activity Description */}
-            <Text style={[s.fieldLabel, dark && { color: '#eee' }]}>Activity Description</Text>
+            <Text style={[s.fieldLabel, dark && { color: t.text }]}>Activity Description</Text>
             <TextInput
-              style={[s.fieldBox, { height: 100, textAlignVertical: 'top' }, dark && { backgroundColor: '#2A2A2A', color: '#eee' }]}
+              style={[s.fieldBox, { height: 100, textAlignVertical: 'top' }, dark && { backgroundColor: t.inputBg, color: t.text }]}
               placeholder="type here..."
               placeholderTextColor="#888"
               value={newTitle}
@@ -129,12 +129,12 @@ export default function PlannerScreen() {
             />
 
             {/* Share */}
-            <Text style={[s.fieldLabel, dark && { color: '#eee' }]}>Share to Members/Groups</Text>
+            <Text style={[s.fieldLabel, dark && { color: t.text }]}>Share to Members/Groups</Text>
             <Text style={s.fieldSub}>Share this entry to multiple people!</Text>
-            <View style={[s.fieldRow, dark && { backgroundColor: '#2A2A2A' }]}>
-              <Ionicons name="people-outline" size={20} color={dark ? '#aaa' : '#555'} />
+            <View style={[s.fieldRow, dark && { backgroundColor: t.inputBg }]}>
+              <Ionicons name="people-outline" size={20} color={dark ? t.textSecondary : '#555'} />
               <TextInput
-                style={[s.fieldInput, dark && { color: '#eee' }]}
+                style={[s.fieldInput, dark && { color: t.text }]}
                 placeholder="search people"
                 placeholderTextColor="#888"
                 editable={false}
@@ -143,7 +143,7 @@ export default function PlannerScreen() {
 
             {/* Show in To-Do */}
             <View style={s.switchRow}>
-              <Text style={[s.switchLabel, dark && { color: '#eee' }]}>Show in To-Do on Dashboard</Text>
+              <Text style={[s.switchLabel, dark && { color: t.text }]}>Show in To-Do on Dashboard</Text>
               <Switch
                 value={isShared}
                 onValueChange={setIsShared}
@@ -158,10 +158,10 @@ export default function PlannerScreen() {
                 {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.saveBtnText}>Save & Close</Text>}
               </Pressable>
               <Pressable
-                style={[s.cancelBtn, dark && { backgroundColor: '#333' }]}
+                style={[s.cancelBtn, dark && { backgroundColor: t.inputBg }]}
                 onPress={() => { setModalVisible(false); setNewTitle(''); setNewTime(''); }}
               >
-                <Text style={[s.cancelBtnText, dark && { color: '#eee' }]}>Cancel</Text>
+                <Text style={[s.cancelBtnText, dark && { color: t.text }]}>Cancel</Text>
               </Pressable>
             </View>
           </ScrollView>

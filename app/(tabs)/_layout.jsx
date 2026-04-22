@@ -3,18 +3,21 @@ import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/theme';
 import { useUIStore } from '../../store/uiStore';
+import { useTheme } from '../../hooks/useTheme';
 
 function HomeIcon({ focused }) {
+  const { isDark } = useTheme();
   return (
     <View style={{
       width: 58, height: 58, borderRadius: 29,
-      backgroundColor: '#fff',
+      backgroundColor: isDark ? '#0F1419' : '#fff',
+      borderWidth: 2, borderColor: isDark ? '#fff' : colors.primary,
       justifyContent: 'center', alignItems: 'center',
       marginBottom: 26,
       shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
       shadowOpacity: 0.2, shadowRadius: 5, elevation: 8,
     }}>
-      <Ionicons name="home" size={26} color={colors.primary} />
+      <Ionicons name="home" size={26} color={isDark ? '#fff' : colors.primary} />
     </View>
   );
 }
@@ -114,7 +117,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="notifications"         options={{ href: null }} />
       <Tabs.Screen name="chapter-announcements" options={{ href: null }} />
       <Tabs.Screen name="id-upload"             options={{ href: null }} />
-      <Tabs.Screen name="event-information"     options={{ href: null }} />
       <Tabs.Screen name="event-detail"          options={{ href: null }} />
       <Tabs.Screen name="achievement"           options={{ href: null }} />
     </Tabs>

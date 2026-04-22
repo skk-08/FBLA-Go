@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { colors, fontSize, spacing, radius } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { useNotificationsViewModel } from '../../viewmodels/useNotificationsViewModel';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 
@@ -14,20 +15,20 @@ const SAMPLES = [
   { id: '4',    title: 'Reminder',         body: 'Chapter Meeting',   created_at: new Date(Date.now() - 4   * 3600000).toISOString() },
 ];
 
-function NotifCard({ item, onPress }) {
+function NotifCard({ item, onPress, t, dark }) {
   const time = item.created_at
     ? formatDistanceToNow(parseISO(item.created_at), { addSuffix: true })
     : '';
   return (
-    <Pressable style={s.card} onPress={onPress}>
+    <Pressable style={[s.card, dark && { backgroundColor: t.card }]} onPress={onPress}>
       <View style={s.iconCircle} />
       <View style={s.content}>
-        <Text style={s.title}>{item.title}</Text>
-        {item.body ? <Text style={s.body}>{item.body}</Text> : null}
-        <Text style={s.time}>{time}</Text>
+        <Text style={[s.title, dark && { color: t.text }]}>{item.title}</Text>
+        {item.body ? <Text style={[s.body, dark && { color: t.textSecondary }]}>{item.body}</Text> : null}
+        <Text style={[s.time, dark && { color: t.textMuted }]}>{time}</Text>
       </View>
       {item.link && (
-        <Ionicons name="chevron-forward" size={16} color="#bbb" />
+        <Ionicons name="chevron-forward" size={16} color={dark ? t.textSecondary : '#bbb'} />
       )}
     </Pressable>
   );
@@ -35,6 +36,8 @@ function NotifCard({ item, onPress }) {
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { colors: t, isDark } = useTheme();
+  const dark = isDark;
   const { notifications, loading, markAllRead } = useNotificationsViewModel();
   const display = notifications.length > 0 ? notifications : SAMPLES;
 
@@ -52,7 +55,7 @@ export default function NotificationsScreen() {
       </View>
 
       {loading ? <LoadingSpinner /> : (
-        <View style={{ flex: 1, backgroundColor: '#fff' }}>
+        <View style={{ flex: 1, backgroundColor: t.bg }}>
           <View style={{ alignItems: 'flex-end', paddingHorizontal: spacing.lg, paddingVertical: spacing.md }}>
             <Pressable style={s.markAllBtn} onPress={markAllRead}>
               <Text style={s.markAllText}>Mark all as read</Text>
@@ -63,10 +66,10 @@ export default function NotificationsScreen() {
             data={display}
             keyExtractor={(n) => n.id}
             renderItem={({ item }) => (
-              <NotifCard item={item} onPress={() => handlePress(item)} />
+              <NotifCard item={item} onPress={() => handlePress(item)} t={t} dark={dark} />
             )}
             contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.md, paddingBottom: 40 }}
-            ListEmptyComponent={<Text style={s.empty}>No notifications</Text>}
+            ListEmptyComponent={<Text style={[s.empty, dark && { color: t.textSecondary }]}>No notifications</Text>}
           />
         </View>
       )}

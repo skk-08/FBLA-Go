@@ -6,12 +6,15 @@ import { WebView } from 'react-native-webview';
 import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, spacing, radius } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 
 const INSTAGRAM_URL = 'https://www.instagram.com/fbla_pbl/';
 const DESKTOP_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
 export default function SocialHubScreen() {
   const router = useRouter();
+  const { colors: t, isDark } = useTheme();
+  const dark = isDark;
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(false);
 
@@ -29,16 +32,16 @@ export default function SocialHubScreen() {
         <Text style={s.headerTitle}>FBLA Social Hub</Text>
       </View>
 
-      <View style={{ flex: 1, backgroundColor: '#fff' }}>
-        <Text style={s.latestLabel}>Latest Updates</Text>
+      <View style={{ flex: 1, backgroundColor: t.bg }}>
+        <Text style={[s.latestLabel, dark && { color: t.text, borderBottomColor: t.hairline }]}>Latest Updates</Text>
 
         <View style={{ flex: 1 }}>
           {error ? (
             <View style={s.errWrap}>
-              <Ionicons name="wifi-outline" size={48} color="#ccc" />
-              <Text style={s.errText}>Couldn't load content</Text>
-              <Pressable onPress={() => setError(false)} style={s.retryBtn}>
-                <Text style={s.retryText}>Retry</Text>
+              <Ionicons name="wifi-outline" size={48} color={dark ? t.textSecondary : '#ccc'} />
+              <Text style={[s.errText, dark && { color: t.textSecondary }]}>Couldn't load content</Text>
+              <Pressable onPress={() => setError(false)} style={[s.retryBtn, dark && { borderColor: t.hairline }]}>
+                <Text style={[s.retryText, dark && { color: t.text }]}>Retry</Text>
               </Pressable>
             </View>
           ) : (
@@ -62,7 +65,7 @@ export default function SocialHubScreen() {
           )}
         </View>
 
-        <View style={s.footer}>
+        <View style={[s.footer, dark && { borderTopColor: t.hairline }]}>
           <Pressable style={s.openBtn} onPress={openInApp}>
             <Text style={s.openBtnText}>Open in App</Text>
           </Pressable>

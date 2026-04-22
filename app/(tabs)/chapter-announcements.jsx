@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, spacing } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import { fetchAnnouncements } from '../../models/announcementModel';
 
@@ -25,7 +26,7 @@ function AuthorBubble({ name }) {
   );
 }
 
-function AnnouncementCard({ item, canShare }) {
+function AnnouncementCard({ item, canShare, t, dark }) {
   const posted = item.created_at
     ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : '';
@@ -41,10 +42,10 @@ function AnnouncementCard({ item, canShare }) {
       <View style={s.cardHeader}>
         <Text style={s.cardTitle}>{item.title}</Text>
       </View>
-      <View style={s.cardBody}>
-        <Text style={s.cardText}>{item.body}</Text>
+      <View style={[s.cardBody, dark && { backgroundColor: t.card }]}>
+        <Text style={[s.cardText, dark && { color: t.text }]}>{item.body}</Text>
         <View style={s.cardFooter}>
-          <Text style={s.postedText}>Posted: {posted}</Text>
+          <Text style={[s.postedText, dark && { color: t.textSecondary }]}>Posted: {posted}</Text>
           <AuthorBubble name={item.author_name} />
         </View>
         {canShare && (
@@ -62,6 +63,8 @@ function AnnouncementCard({ item, canShare }) {
 
 export default function ChapterAnnouncementsScreen() {
   const router = useRouter();
+  const { colors: t, isDark } = useTheme();
+  const dark = isDark;
   const { profile } = useAuthStore();
   const [tab, setTab] = useState('current');
   const [announcements, setAnnouncements] = useState(SAMPLE);
@@ -117,13 +120,13 @@ export default function ChapterAnnouncementsScreen() {
       </View>
 
       {/* Tabs row */}
-      <View style={s.tabRow}>
+      <View style={[s.tabRow, dark && { backgroundColor: t.bg, borderBottomColor: t.hairline }]}>
         <Pressable onPress={() => setTab('current')} style={s.tabWrap}>
-          <Text style={[s.tabText, tab === 'current' && s.tabActive]}>Current</Text>
+          <Text style={[s.tabText, tab === 'current' && s.tabActive, dark && { color: tab === 'current' ? t.text : t.textSecondary }]}>Current</Text>
           {tab === 'current' && <View style={s.underline} />}
         </Pressable>
         <Pressable onPress={() => setTab('archived')} style={s.tabWrap}>
-          <Text style={[s.tabText, tab === 'archived' && s.tabActive]}>Archived</Text>
+          <Text style={[s.tabText, tab === 'archived' && s.tabActive, dark && { color: tab === 'archived' ? t.text : t.textSecondary }]}>Archived</Text>
           {tab === 'archived' && <View style={s.underline} />}
         </Pressable>
         <View style={{ flex: 1 }} />
@@ -135,14 +138,14 @@ export default function ChapterAnnouncementsScreen() {
       </View>
 
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: t.bg }}>
           <ActivityIndicator color={colors.primary} />
         </View>
       ) : (
-        <ScrollView style={{ backgroundColor: '#fff' }} contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}>
-          {display.length === 0 && <Text style={s.empty}>No announcements</Text>}
+        <ScrollView style={{ backgroundColor: t.bg }} contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}>
+          {display.length === 0 && <Text style={[s.empty, dark && { color: t.textSecondary }]}>No announcements</Text>}
           {display.map((a) => (
-            <AnnouncementCard key={a.id} item={a} canShare={isPrivileged} />
+            <AnnouncementCard key={a.id} item={a} canShare={isPrivileged} t={t} dark={dark} />
           ))}
           <View style={{ height: 40 }} />
         </ScrollView>
@@ -154,18 +157,18 @@ export default function ChapterAnnouncementsScreen() {
           style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={s.modalCard}>
-            <Text style={s.modalTitle}>New Announcement</Text>
+          <View style={[s.modalCard, dark && { backgroundColor: t.card }]}>
+            <Text style={[s.modalTitle, dark && { color: t.text }]}>New Announcement</Text>
 
             <TextInput
-              style={s.input}
+              style={[s.input, dark && { backgroundColor: t.inputBg, color: t.text }]}
               placeholder="Title"
               placeholderTextColor="#888"
               value={newTitle}
               onChangeText={setNewTitle}
             />
             <TextInput
-              style={[s.input, { height: 120, textAlignVertical: 'top' }]}
+              style={[s.input, { height: 120, textAlignVertical: 'top' }, dark && { backgroundColor: t.inputBg, color: t.text }]}
               placeholder="Description..."
               placeholderTextColor="#888"
               value={newBody}
@@ -185,10 +188,10 @@ export default function ChapterAnnouncementsScreen() {
                 }
               </Pressable>
               <Pressable
-                style={[s.modalBtn, { backgroundColor: '#D0D0D0', flex: 1 }]}
+                style={[s.modalBtn, { backgroundColor: dark ? t.inputBg : '#D0D0D0', flex: 1 }]}
                 onPress={() => { setModalVisible(false); setNewTitle(''); setNewBody(''); }}
               >
-                <Text style={[s.modalBtnText, { color: '#1A1A1A' }]}>Cancel</Text>
+                <Text style={[s.modalBtnText, { color: dark ? t.text : '#1A1A1A' }]}>Cancel</Text>
               </Pressable>
             </View>
           </View>

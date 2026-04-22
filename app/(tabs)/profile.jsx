@@ -2,6 +2,7 @@ import { View, Text, Image, ScrollView, Pressable, StyleSheet, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, fontSize, spacing } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { useProfileViewModel } from '../../viewmodels/useProfileViewModel';
 
 function Avatar({ name, photoUrl, size = 120 }) {
@@ -24,16 +25,17 @@ function Avatar({ name, photoUrl, size = 120 }) {
   );
 }
 
-function InterestPill({ label }) {
+function InterestPill({ label, t }) {
   return (
-    <View style={s.pill}>
-      <Text style={s.pillText}>{label}</Text>
+    <View style={[s.pill, { backgroundColor: t.inputBg }]}>
+      <Text style={[s.pillText, { color: t.text }]}>{label}</Text>
     </View>
   );
 }
 
 export default function ProfileTab() {
   const router = useRouter();
+  const { colors: t } = useTheme();
   const { profile, userEvents, uploading, pickAndUploadID } = useProfileViewModel();
 
   const name      = profile?.full_name ?? 'Member';
@@ -44,45 +46,43 @@ export default function ProfileTab() {
   const bio       = profile?.bio ?? `Passionate about business and FBLA. Member of ${profile?.chapter_name ?? 'my chapter'}.`;
 
   return (
-    <SafeAreaView style={s.safe} edges={['top']}>
+    <SafeAreaView style={[s.safe, { backgroundColor: t.profileHeader }]} edges={['top']}>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
 
-        {/* Blue-gray header with avatar */}
-        <View style={s.headerSection}>
+        <View style={[s.headerSection, { backgroundColor: t.profileHeader }]}>
           <Avatar name={name} photoUrl={profile?.photo_url} />
           <Text style={s.name}>{name}</Text>
           {roleLabel ? <Text style={s.role}>{roleLabel}</Text> : null}
         </View>
 
-        {/* White card body */}
-        <View style={s.body}>
+        <View style={[s.body, { backgroundColor: t.bg }]}>
 
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>About Me:</Text>
-            <Text style={s.sectionBody}>{bio}</Text>
+          <View style={[s.section, { backgroundColor: t.card }]}>
+            <Text style={[s.sectionTitle, { color: t.text }]}>About Me:</Text>
+            <Text style={[s.sectionBody, { color: t.textSecondary }]}>{bio}</Text>
           </View>
 
           {interests.length > 0 && (
-            <View style={s.section}>
-              <Text style={s.sectionTitle}>Skills & Interests:</Text>
+            <View style={[s.section, { backgroundColor: t.card }]}>
+              <Text style={[s.sectionTitle, { color: t.text }]}>Skills & Interests:</Text>
               <View style={s.pillRow}>
-                {interests.map((i) => <InterestPill key={i} label={i} />)}
+                {interests.map((i) => <InterestPill key={i} label={i} t={t} />)}
               </View>
             </View>
           )}
 
           {userEvents.length > 0 && (
-            <View style={s.section}>
-              <Text style={s.sectionTitle}>Registered Events:</Text>
+            <View style={[s.section, { backgroundColor: t.card }]}>
+              <Text style={[s.sectionTitle, { color: t.text }]}>Registered Events:</Text>
               {userEvents.map((ue) => (
-                <Text key={ue.id} style={s.sectionBody}>• {ue.events?.name ?? 'Event'}</Text>
+                <Text key={ue.id} style={[s.sectionBody, { color: t.textSecondary }]}>• {ue.events?.name ?? 'Event'}</Text>
               ))}
             </View>
           )}
 
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Links:</Text>
-            <Text style={s.sectionBody}>
+          <View style={[s.section, { backgroundColor: t.card }]}>
+            <Text style={[s.sectionTitle, { color: t.text }]}>Links:</Text>
+            <Text style={[s.sectionBody, { color: t.textSecondary }]}>
               {profile?.chapter_name ?? 'ICS FBLA'} Instagram:{' '}
               <Text style={{ color: colors.primary, textDecorationLine: 'underline' }}>
                 https://instagramicsfbla
@@ -93,12 +93,12 @@ export default function ProfileTab() {
           <Pressable
             onPress={pickAndUploadID}
             disabled={uploading}
-            style={s.uploadBtn}
+            style={[s.uploadBtn, { backgroundColor: t.inputBg }]}
           >
             {uploading ? (
               <ActivityIndicator color={colors.primary} />
             ) : (
-              <Text style={s.uploadText}>
+              <Text style={[s.uploadText, { color: colors.primary }]}>
                 {profile?.member_id_url ? 'Update Member ID' : 'Upload Member ID'}
               </Text>
             )}
@@ -118,17 +118,17 @@ export default function ProfileTab() {
 }
 
 const s = StyleSheet.create({
-  safe:           { flex: 1, backgroundColor: colors.profileHeader },
-  headerSection:  { backgroundColor: colors.profileHeader, alignItems: 'center', paddingTop: spacing.xl, paddingBottom: spacing.xxl },
+  safe:           { flex: 1 },
+  headerSection:  { alignItems: 'center', paddingTop: spacing.xl, paddingBottom: spacing.xxl },
   name:           { color: colors.white, fontSize: 24, fontWeight: '800', marginTop: spacing.md },
   role:           { color: colors.white, fontSize: fontSize.sm, marginTop: 4, opacity: 0.9 },
-  body:           { backgroundColor: '#F5F5F5', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.xl, flex: 1, marginTop: -16 },
-  section:        { backgroundColor: '#fff', borderRadius: 12, padding: spacing.lg, marginBottom: spacing.md },
-  sectionTitle:   { fontSize: fontSize.base, fontWeight: '800', color: '#1A1A1A', marginBottom: spacing.sm },
-  sectionBody:    { fontSize: fontSize.sm, color: '#444', lineHeight: 22 },
+  body:           { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: spacing.xl, flex: 1, marginTop: -16 },
+  section:        { borderRadius: 12, padding: spacing.lg, marginBottom: spacing.md },
+  sectionTitle:   { fontSize: fontSize.base, fontWeight: '800', marginBottom: spacing.sm },
+  sectionBody:    { fontSize: fontSize.sm, lineHeight: 22 },
   pillRow:        { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
-  pill:           { backgroundColor: '#DCDCDC', borderRadius: 20, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
-  pillText:       { fontSize: fontSize.sm, color: '#333' },
-  uploadBtn:      { backgroundColor: '#EBEBEB', borderRadius: 12, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
-  uploadText:     { fontSize: fontSize.base, fontWeight: '600', color: colors.primary },
+  pill:           { borderRadius: 20, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  pillText:       { fontSize: fontSize.sm },
+  uploadBtn:      { borderRadius: 12, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
+  uploadText:     { fontSize: fontSize.base, fontWeight: '600' },
 });

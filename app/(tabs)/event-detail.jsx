@@ -3,24 +3,27 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, spacing } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 
-function ResourceCard({ icon, label, sublabel, onPress }) {
+function ResourceCard({ icon, label, sublabel, onPress, t, dark }) {
   return (
-    <Pressable style={s.card} onPress={onPress}>
+    <Pressable style={[s.card, dark && { backgroundColor: t.card }]} onPress={onPress}>
       <View style={s.cardIcon}>
-        <Ionicons name={icon} size={40} color="#888" />
+        <Ionicons name={icon} size={40} color={dark ? t.textSecondary : '#888'} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={s.cardLabel}>{label}</Text>
-        {sublabel ? <Text style={s.cardSub}>{sublabel}</Text> : null}
+        <Text style={[s.cardLabel, dark && { color: t.text }]}>{label}</Text>
+        {sublabel ? <Text style={[s.cardSub, dark && { color: t.textSecondary }]}>{sublabel}</Text> : null}
       </View>
-      <Ionicons name="chevron-forward" size={20} color="#bbb" />
+      <Ionicons name="chevron-forward" size={20} color={dark ? t.textSecondary : '#bbb'} />
     </Pressable>
   );
 }
 
 export default function EventDetailScreen() {
   const router = useRouter();
+  const { colors: t, isDark } = useTheme();
+  const dark = isDark;
   const { name } = useLocalSearchParams();
 
   const slug = String(name ?? '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -49,8 +52,8 @@ export default function EventDetailScreen() {
         <Text style={s.headerTitle}>Event Information</Text>
       </View>
 
-      <View style={s.body}>
-        <Text style={s.eventName}>{name}</Text>
+      <View style={[s.body, dark && { backgroundColor: t.bg }]}>
+        <Text style={[s.eventName, dark && { color: colors.accent }]}>{name}</Text>
 
         <View style={s.cards}>
           <ResourceCard
@@ -58,12 +61,16 @@ export default function EventDetailScreen() {
             label="Event Archives"
             sublabel="View past materials saved by your chapter"
             onPress={openArchives}
+            t={t}
+            dark={dark}
           />
           <ResourceCard
             icon="document-text-outline"
             label="Event Rubric"
             sublabel="Opens rubric & rules PDF in browser"
             onPress={openRubric}
+            t={t}
+            dark={dark}
           />
         </View>
       </View>

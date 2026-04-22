@@ -154,10 +154,9 @@ export default function SignupScreen() {
   const {
     firstName, setFirstName, lastName, setLastName,
     school, setSchool, role, setRole, roleCode, setRoleCode,
-    otp, setOtp,
     email, setEmail, password, setPassword, confirm, setConfirm,
     errors, serverError, isLoading,
-    sendVerificationCode, verifyEmailCode, completeProfile, validateProfileFields,
+    validateCredentials, completeProfile, validateProfileFields,
   } = useSignupViewModel();
 
   function toggleInterest(key) {
@@ -182,24 +181,18 @@ export default function SignupScreen() {
     if (!result.canceled) setPhotoUri(result.assets[0].uri);
   }
 
-  async function handleStep0Next() {
-    const ok = await sendVerificationCode();
-    if (ok) setStep(1);
+  function handleStep0Next() {
+    if (validateCredentials()) setStep(1);
   }
 
-  async function handleVerifyNext() {
-    const ok = await verifyEmailCode();
-    if (ok) setStep(2);
-  }
-
-  async function handleStep2Next() {
+  async function handleStep1Next() {
     if (!validateProfileFields()) return;
     if (role === 'advisor') {
       const ok = await completeProfile(null, []);
       if (ok) router.replace('/(tabs)');
       return;
     }
-    setStep(3);
+    setStep(2);
   }
 
   async function handleComplete() {
@@ -250,7 +243,7 @@ export default function SignupScreen() {
               <PasswordMatch password={password} confirm={confirm} />
 
               <View style={s.btnRow}>
-                <YellowButton title="Send Verification Code" onPress={handleStep0Next} loading={isLoading} />
+                <YellowButton title="Next" onPress={handleStep0Next} loading={isLoading} />
               </View>
 
               <View style={s.loginLink}>
@@ -262,42 +255,8 @@ export default function SignupScreen() {
             </>
           )}
 
-          {/* ── STEP 1: Email Verification ─────────────────────────────────── */}
+          {/* ── STEP 1: Create Your Profile (1/3) ─────────────────────────── */}
           {step === 1 && (
-            <>
-              <Text style={[s.stepTitle, { fontSize: 26 }]}>Verify Your Email</Text>
-              <Text style={s.verifySubtitle}>
-                We sent a 6-digit code to{'\n'}
-                <Text style={{ color: colors.accent, fontWeight: '700' }}>{email}</Text>
-              </Text>
-              <ErrorBanner message={serverError} />
-
-              <TextInput
-                style={s.otpInput}
-                placeholder="000000"
-                placeholderTextColor="#888"
-                value={otp}
-                onChangeText={(t) => setOtp(t.replace(/[^0-9]/g, '').slice(0, 6))}
-                keyboardType="number-pad"
-                maxLength={6}
-                textAlign="center"
-              />
-              {errors.otp ? <Text style={[s.err, { textAlign: 'center' }]}>{errors.otp}</Text> : null}
-
-              <View style={s.btnRow}>
-                <YellowButton title="Verify" onPress={handleVerifyNext} loading={isLoading} />
-              </View>
-
-              <Pressable onPress={handleStep0Next} style={{ alignItems: 'center', marginTop: spacing.md }}>
-                <Text style={{ color: colors.white, fontSize: fontSize.sm, textDecorationLine: 'underline', opacity: 0.7 }}>
-                  Resend code
-                </Text>
-              </Pressable>
-            </>
-          )}
-
-          {/* ── STEP 2: Create Your Profile (1/3) ─────────────────────────── */}
-          {step === 2 && (
             <>
               <Text style={[s.stepTitle, { fontSize: 26 }]}>Create Your Profile</Text>
               <ErrorBanner message={serverError} />
@@ -351,7 +310,7 @@ export default function SignupScreen() {
               <View style={s.btnRow}>
                 <YellowButton
                   title={role === 'advisor' ? 'Complete Setup' : 'Next'}
-                  onPress={handleStep2Next}
+                  onPress={handleStep1Next}
                   loading={isLoading}
                 />
                 {role !== 'advisor' && <Text style={s.counter}>1/3</Text>}
@@ -359,8 +318,8 @@ export default function SignupScreen() {
             </>
           )}
 
-          {/* ── STEP 3: Add Photo (2/3) ────────────────────────────────────── */}
-          {step === 3 && (
+          {/* ── STEP 2: Add Photo (2/3) ────────────────────────────────────── */}
+          {step === 2 && (
             <>
               <Text style={[s.stepTitle, { textAlign: 'center' }]}>Add Photo</Text>
 
@@ -387,11 +346,11 @@ export default function SignupScreen() {
               </Pressable>
 
               <View style={s.btnRow}>
-                <YellowButton title="Next" onPress={() => setStep(4)} />
+                <YellowButton title="Next" onPress={() => setStep(3)} />
                 <Text style={s.counter}>2/3</Text>
               </View>
 
-              <Pressable onPress={() => setStep(4)} style={{ alignItems: 'center', marginTop: spacing.md }}>
+              <Pressable onPress={() => setStep(3)} style={{ alignItems: 'center', marginTop: spacing.md }}>
                 <Text style={{ color: colors.white, fontSize: fontSize.sm, textDecorationLine: 'underline', opacity: 0.7 }}>
                   Skip this step
                 </Text>
@@ -399,8 +358,8 @@ export default function SignupScreen() {
             </>
           )}
 
-          {/* ── STEP 4: Personalize & Interests (3/3) ─────────────────────── */}
-          {step === 4 && (
+          {/* ── STEP 3: Personalize & Interests (3/3) ─────────────────────── */}
+          {step === 3 && (
             <>
               <Text style={[s.stepTitle, { textAlign: 'center', fontSize: 24 }]}>
                 Personalize Your Interests

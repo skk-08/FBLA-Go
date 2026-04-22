@@ -4,9 +4,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, spacing, radius } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 
 export default function AchievementScreen() {
   const router = useRouter();
+  const { colors: t, isDark } = useTheme();
+  const dark = isDark;
   const { event, placement } = useLocalSearchParams();
 
   const eventName     = event     ?? 'Mobile App Development';
@@ -37,16 +40,16 @@ export default function AchievementScreen() {
         <Text style={s.headerTitle}>Congratulations!</Text>
       </View>
 
-      <View style={s.body}>
-        <Text style={s.placementText}>
+      <View style={[s.body, dark && { backgroundColor: t.bg }]}>
+        <Text style={[s.placementText, dark && { color: colors.accent }]}>
           You Placed {placementText}{'\n'}in {eventName}!
         </Text>
 
-        <View style={s.trophyWrap}>
+        <View style={[s.trophyWrap, dark && { backgroundColor: t.card }]}>
           <Ionicons name="trophy" size={100} color="#C8A000" />
         </View>
 
-        <Text style={s.shareHeading}>Share Your Achievement!</Text>
+        <Text style={[s.shareHeading, dark && { color: t.text }]}>Share Your Achievement!</Text>
 
         <Pressable style={s.igBtn} onPress={shareToInstagram}>
           <Ionicons name="logo-instagram" size={24} color="#fff" />

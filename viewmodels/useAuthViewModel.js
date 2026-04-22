@@ -82,7 +82,6 @@ export function useSignupViewModel() {
   const [school,      setSchool]      = useState('');
   const [role,        setRole]        = useState('member');
   const [roleCode,    setRoleCode]    = useState('');
-  const [otp,         setOtp]         = useState('');
   const [email,       setEmail]       = useState('');
   const [password,    setPassword]    = useState('');
   const [confirm,     setConfirm]     = useState('');
@@ -113,73 +112,52 @@ export function useSignupViewModel() {
     return Object.keys(e).length === 0;
   }
 
-  // Step 0 — create auth account and trigger OTP email
-  async function sendVerificationCode() {
-    if (!validateCredentials()) return false;
-    setIsLoading(true);
-    setServerError(null);
-    try {
-      const { error } = await supabase.auth.signUp({ email: email.trim(), password });
-      if (error) {
-        if (error.message.toLowerCase().includes('already registered')) {
-          setServerError('An account with this email already exists. Please log in instead.');
-        } else {
-          setServerError(error.message);
-        }
-        return false;
-      }
-      return true;
-    } catch {
-      setServerError('Could not send verification code. Please try again.');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  // Step 1 — verify the 6-digit OTP sent to email
-  async function verifyEmailCode() {
-    setErrors({});
-    if (!otp.trim() || otp.trim().length !== 6) {
-      setErrors({ otp: 'Enter the 6-digit code from your email.' });
-      return false;
-    }
-    setIsLoading(true);
-    setServerError(null);
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: email.trim(),
-        token: otp.trim(),
-        type:  'signup',
-      });
-      if (error) {
-        setServerError('Invalid or expired code. Check your email and try again.');
-        return false;
-      }
-      return true;
-    } catch {
-      setServerError('Verification failed. Please try again.');
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  // Step 4 — save full profile (user is already authenticated via OTP)
+  // Final step — create auth user AND save profile in one atomic flow.
+  // Nothing is written to the DB until this function runs.
   async function completeProfile(photoUri, interests) {
     if (!validateProfileFields()) return false;
     setIsLoading(true);
     setServerError(null);
     try {
-      // 1. Get userId from the session created after OTP verification
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) {
-        setServerError('Session expired. Please restart signup.');
+      // 1. Validate role code FIRST (anon read; no DB writes yet)
+      let verifiedRole = role || 'member';
+      if (role === 'executive' || role === 'advisor') {
+        const { data: codes, error: codeError } = await supabase
+          .from('chapter_codes')
+          .select('executive_code, advisor_code')
+          .ilike('chapter_name', school.trim())
+          .maybeSingle();
+        if (codeError || !codes) {
+          setServerError('Chapter not found. Check the school name or ask your advisor.');
+          return false;
+        }
+        const expected = role === 'executive' ? codes.executive_code : codes.advisor_code;
+        if (!expected || roleCode.trim() !== expected) {
+          setServerError('Invalid role code. Ask your advisor for the correct code.');
+          return false;
+        }
+      }
+
+      // 2. Create auth user (first write — only after all validation passes)
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
+      if (signUpError) {
+        if (signUpError.message.toLowerCase().includes('already registered')) {
+          setServerError('An account with this email already exists. Please log in instead.');
+        } else {
+          setServerError(signUpError.message);
+        }
         return false;
       }
-      const userId = currentUser.id;
+      const userId = signUpData.user?.id;
+      if (!userId) {
+        setServerError('Could not create account. Please try again.');
+        return false;
+      }
 
-      // 2. Ensure public.users has this user's row (DB trigger may have beat us)
+      // 3. Insert into public.users
       const { error: usersError } = await supabase
         .from('users')
         .upsert({ id: userId, email: email.trim() }, { onConflict: 'id' });
@@ -195,29 +173,28 @@ export function useSignupViewModel() {
         }
       }
 
-      // 3. Validate role code for executive/advisor signups
-      let verifiedRole = role || 'member';
-      if (role === 'executive' || role === 'advisor') {
-        const { data: codes } = await supabase
-          .from('chapter_codes')
-          .select('executive_code, advisor_code')
-          .ilike('chapter_name', school.trim())
-          .single();
-        const expected = role === 'executive' ? codes?.executive_code : codes?.advisor_code;
-        if (!expected || roleCode.trim() !== expected) {
-          setServerError('Invalid role code. Ask your advisor for the correct code.');
-          return false;
-        }
-      }
-
-      // 4. Save profile and mark onboarding complete
+      // 4. Save profile and mark onboarding complete.
+      //    If this fails, roll back public.users and sign out so the user isn't
+      //    left in a half-created state. (auth.users orphan must be cleaned in SQL.)
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
-      const savedProfile = await upsertProfile(userId, {
-        full_name:           fullName,
-        chapter_name:        school.trim(),
-        role:                verifiedRole,
-        onboarding_complete: true,
-      });
+      let savedProfile;
+      try {
+        savedProfile = await upsertProfile(userId, {
+          full_name:           fullName,
+          chapter_name:        school.trim(),
+          role:                verifiedRole,
+          onboarding_complete: true,
+        });
+      } catch (profileErr) {
+        await supabase.from('users').delete().eq('id', userId);
+        await supabase.auth.signOut();
+        setServerError(
+          profileErr?.message
+            ? `Setup failed: ${profileErr.message}`
+            : 'Setup failed. Please contact your advisor.'
+        );
+        return false;
+      }
 
       // 5. Save interests separately
       if (interests?.length) {
@@ -249,10 +226,9 @@ export function useSignupViewModel() {
   return {
     firstName, setFirstName, lastName, setLastName,
     school, setSchool, role, setRole, roleCode, setRoleCode,
-    otp, setOtp,
     email, setEmail,
     password, setPassword, confirm, setConfirm,
     errors, serverError, isLoading,
-    sendVerificationCode, verifyEmailCode, completeProfile, validateProfileFields,
+    validateCredentials, completeProfile, validateProfileFields,
   };
 }

@@ -1,11 +1,23 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View, Text, Image, ScrollView, TextInput, Pressable, StyleSheet, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, spacing } from '../../constants/theme';
-import { useUIStore } from '../../store/uiStore';
+import { useTheme } from '../../hooks/useTheme';
+import {
+  PRESENTATION_EVENTS,
+  OBJECTIVE_TESTING_EVENTS,
+  ROLE_PLAY_EVENTS,
+} from '../../constants/fblaEvents';
+
+const CATEGORIES = [
+  { key: 'presentation', label: 'Presentation\nEvents',  data: PRESENTATION_EVENTS },
+  { key: 'objective',    label: 'Objective\nTesting',    data: OBJECTIVE_TESTING_EVENTS },
+  { key: 'roleplay',     label: 'Role play\nEvents',     data: ROLE_PLAY_EVENTS },
+];
 
 const LOGO = require('../../assets/fblago-logo.png');
 
@@ -34,14 +46,23 @@ const EVENTS = [
 ];
 
 export default function MyEventScreen() {
-  const { isDarkMode } = useUIStore();
-  const dark = isDarkMode;
-  const [activeTab, setActiveTab] = useState('current');
+  const router = useRouter();
+  const { colors: t, isDark } = useTheme();
+  const dark = isDark;
+  const params = useLocalSearchParams();
+  const [activeTab, setActiveTab] = useState(params?.tab === 'browse' ? 'browse' : 'current');
+  const [categoryTab, setCategoryTab] = useState('presentation');
   const [search, setSearch] = useState('');
 
   const filtered = EVENTS.filter((e) =>
     e.name.toLowerCase().replace('\n', ' ').includes(search.toLowerCase())
   );
+
+  const browseData = CATEGORIES.find((c) => c.key === categoryTab)?.data ?? [];
+  const filteredBrowse = useMemo(() => {
+    if (!search.trim()) return browseData;
+    return browseData.filter((name) => name.toLowerCase().includes(search.toLowerCase()));
+  }, [search, browseData]);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -50,13 +71,13 @@ export default function MyEventScreen() {
         <Text style={s.headerTitle}>Event Details</Text>
       </View>
 
-      <View style={{ flex: 1, backgroundColor: dark ? '#121212' : '#fff' }}>
+      <View style={{ flex: 1, backgroundColor: t.bg }}>
         {/* Search */}
-        <View style={[s.searchWrap, dark && { backgroundColor: '#2A2A2A' }]}>
+        <View style={[s.searchWrap, dark && { backgroundColor: t.inputBg }]}>
           <Ionicons name="search-outline" size={16} color="#999" />
           <TextInput
-            style={[s.searchInput, dark && { color: '#eee' }]}
-            placeholder="Search event name, city, state, or region"
+            style={[s.searchInput, dark && { color: t.text }]}
+            placeholder={activeTab === 'browse' ? 'Search event name' : 'Search event name, city, state, or region'}
             placeholderTextColor="#888"
             value={search}
             onChangeText={setSearch}
@@ -64,56 +85,93 @@ export default function MyEventScreen() {
         </View>
 
         {/* Tabs */}
-        <View style={[s.tabRow, dark && { borderBottomColor: '#333' }]}>
+        <View style={[s.tabRow, dark && { borderBottomColor: t.hairline }]}>
           <Pressable onPress={() => setActiveTab('current')} style={s.tabWrap}>
-            <Text style={[s.tabText, activeTab === 'current' && s.tabActive, dark && { color: activeTab === 'current' ? colors.primary : '#666' }]}>
+            <Text style={[s.tabText, activeTab === 'current' && s.tabActive, dark && { color: activeTab === 'current' ? t.text : t.textSecondary }]}>
               Current Events
             </Text>
             {activeTab === 'current' && <View style={s.underline} />}
           </Pressable>
           <Pressable onPress={() => setActiveTab('scores')} style={s.tabWrap}>
-            <Text style={[s.tabText, activeTab === 'scores' && s.tabActive, dark && { color: activeTab === 'scores' ? colors.primary : '#666' }]}>
+            <Text style={[s.tabText, activeTab === 'scores' && s.tabActive, dark && { color: activeTab === 'scores' ? t.text : t.textSecondary }]}>
               Scores
             </Text>
             {activeTab === 'scores' && <View style={s.underline} />}
           </Pressable>
+          <Pressable onPress={() => setActiveTab('browse')} style={s.tabWrap}>
+            <Text style={[s.tabText, activeTab === 'browse' && s.tabActive, dark && { color: activeTab === 'browse' ? t.text : t.textSecondary }]}>
+              Browse
+            </Text>
+            {activeTab === 'browse' && <View style={s.underline} />}
+          </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: 40 }}>
-          <Text style={s.dateLabel}>April 2026</Text>
+        {activeTab === 'browse' ? (
+          <>
+            <View style={s.categoryRow}>
+              {CATEGORIES.map((c) => (
+                <Pressable
+                  key={c.key}
+                  style={[s.categoryBtn, dark && { backgroundColor: t.card }, categoryTab === c.key && s.categoryBtnActive]}
+                  onPress={() => setCategoryTab(c.key)}
+                >
+                  <Text style={[s.categoryText, dark && { color: t.textSecondary }, categoryTab === c.key && s.categoryTextActive]}>
+                    {c.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <ScrollView contentContainerStyle={s.browseList}>
+              {filteredBrowse.map((name) => (
+                <Pressable
+                  key={name}
+                  onPress={() => router.push({ pathname: '/(tabs)/event-detail', params: { name } })}
+                >
+                  <Text style={[s.eventLink, dark && { color: colors.accent }]}>{name}</Text>
+                </Pressable>
+              ))}
+              {filteredBrowse.length === 0 && (
+                <Text style={[s.empty, dark && { color: t.textSecondary }]}>No events found</Text>
+              )}
+            </ScrollView>
+          </>
+        ) : (
+          <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: 40 }}>
+            <Text style={s.dateLabel}>April 2026</Text>
 
-          {filtered.map((ev) => (
-            <View key={ev.id} style={[s.card, dark && { backgroundColor: '#1E1E1E' }]}>
-              <Text style={[s.eventName, dark && { color: '#eee' }]}>{ev.name}</Text>
+            {filtered.map((ev) => (
+              <View key={ev.id} style={[s.card, dark && { backgroundColor: t.card }]}>
+                <Text style={[s.eventName, dark && { color: t.text }]}>{ev.name}</Text>
 
-              {activeTab === 'current' ? (
-                <>
-                  <Text style={[s.conference, dark && { color: '#ccc' }]}>{ev.conference}</Text>
+                {activeTab === 'current' ? (
+                  <>
+                    <Text style={[s.conference, dark && { color: t.text }]}>{ev.conference}</Text>
+                    <View style={s.cardFooter}>
+                      <Text style={[s.dates, dark && { color: t.textSecondary }]}>{ev.dates}</Text>
+                      <Pressable
+                        style={s.actionBtn}
+                        onPress={() => Alert.alert('Check In', `Checking in to ${ev.name.replace('\n', ' ')}`)}
+                      >
+                        <Text style={s.actionText}>Check In</Text>
+                      </Pressable>
+                    </View>
+                  </>
+                ) : (
                   <View style={s.cardFooter}>
-                    <Text style={[s.dates, dark && { color: '#aaa' }]}>{ev.dates}</Text>
-                    <Pressable
-                      style={s.actionBtn}
-                      onPress={() => Alert.alert('Check In', `Checking in to ${ev.name.replace('\n', ' ')}`)}
-                    >
-                      <Text style={s.actionText}>Check In</Text>
+                    <Text style={s.score}>{ev.score}</Text>
+                    <Pressable style={s.actionBtn}>
+                      <Text style={s.actionText}>more</Text>
                     </Pressable>
                   </View>
-                </>
-              ) : (
-                <View style={s.cardFooter}>
-                  <Text style={s.score}>{ev.score}</Text>
-                  <Pressable style={s.actionBtn}>
-                    <Text style={s.actionText}>more</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
-          ))}
+                )}
+              </View>
+            ))}
 
-          {filtered.length === 0 && (
-            <Text style={s.empty}>No events found</Text>
-          )}
-        </ScrollView>
+            {filtered.length === 0 && (
+              <Text style={[s.empty, dark && { color: t.textSecondary }]}>No events found</Text>
+            )}
+          </ScrollView>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -142,4 +200,11 @@ const s = StyleSheet.create({
   actionBtn:   { backgroundColor: colors.primary, borderRadius: 20, paddingVertical: 8, paddingHorizontal: spacing.lg },
   actionText:  { color: '#fff', fontSize: fontSize.sm, fontWeight: '600' },
   empty:       { textAlign: 'center', color: '#888', paddingTop: 40, fontSize: fontSize.sm },
+  categoryRow:       { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingTop: spacing.md, marginBottom: spacing.md },
+  categoryBtn:       { flex: 1, backgroundColor: '#D9D9D9', borderRadius: 10, paddingVertical: spacing.sm, alignItems: 'center' },
+  categoryBtnActive: { backgroundColor: colors.primary },
+  categoryText:      { fontSize: 11, fontWeight: '600', color: '#555', textAlign: 'center', lineHeight: 15 },
+  categoryTextActive:{ color: '#fff' },
+  browseList:        { paddingHorizontal: spacing.xl, paddingBottom: 40, gap: 4 },
+  eventLink:         { fontSize: fontSize.sm, color: colors.primary, textDecorationLine: 'underline', paddingVertical: 6 },
 });

@@ -7,11 +7,14 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, fontSize, spacing } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import { uploadMemberID, updateProfile } from '../../models/userModel';
 
 export default function IDUploadScreen() {
   const router = useRouter();
+  const { colors: t, isDark } = useTheme();
+  const dark = isDark;
   const { profile, user, setProfile } = useAuthStore();
   const [uploading, setUploading] = useState(false);
   const [viewFull, setViewFull] = useState(false);
@@ -46,7 +49,7 @@ export default function IDUploadScreen() {
         <Text style={s.headerTitle}>ID Upload/Access</Text>
       </View>
 
-      <View style={s.body}>
+      <View style={[s.body, dark && { backgroundColor: t.bg }]}>
         <Pressable style={s.scanBtn} onPress={handleScan} disabled={uploading}>
           {uploading ? (
             <ActivityIndicator color="#fff" size="large" />
@@ -59,7 +62,7 @@ export default function IDUploadScreen() {
         </Pressable>
 
         <Pressable
-          style={s.viewBox}
+          style={[s.viewBox, dark && { backgroundColor: t.card }]}
           onPress={() => {
             if (idUrl) setViewFull(true);
             else handleScan();
@@ -72,7 +75,7 @@ export default function IDUploadScreen() {
               resizeMode="contain"
             />
           ) : (
-            <Text style={s.viewText}>Tap to View ID</Text>
+            <Text style={[s.viewText, dark && { color: t.textSecondary }]}>Tap to View ID</Text>
           )}
         </Pressable>
       </View>

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize, spacing } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore } from '../../store/authStore';
 import { useDashboardViewModel } from '../../viewmodels/useDashboardViewModel';
 import { useUIStore } from '../../store/uiStore';
@@ -23,12 +24,13 @@ function ArrowCircle() {
 export default function DashboardScreen() {
   const { profile } = useAuthStore();
   const { todos, nextCompetition, loading, refresh } = useDashboardViewModel();
-  const { notificationCount: notifCount, isDarkMode } = useUIStore();
-  const dark = isDarkMode;
+  const { notificationCount: notifCount } = useUIStore();
+  const { colors: t, isDark } = useTheme();
+  const dark = isDark;
   const router = useRouter();
 
   const firstName = profile?.full_name?.split(' ')[0] ?? 'Member';
-  const completedTodos = todos.filter((t) => t.completed).length;
+  const completedTodos = todos.filter((td) => td.completed).length;
   const progress = todos.length > 0 ? completedTodos / todos.length : 0.65;
 
   const DEFAULT_TODOS = ['Turn in Permission Slip', 'Pay Dues', 'Study for Objective Test'];
@@ -43,7 +45,7 @@ export default function DashboardScreen() {
       </View>
 
       <ScrollView
-        style={{ flex: 1, backgroundColor: dark ? '#121212' : '#fff' }}
+        style={{ flex: 1, backgroundColor: t.bg }}
         contentContainerStyle={{ flexGrow: 1 }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.accent} />}
       >
@@ -82,13 +84,13 @@ export default function DashboardScreen() {
               </Text>
             </View>
 
-            <Pressable style={[s.card, dark && { backgroundColor: '#1E1E1E' }]} onPress={() => router.push('/(tabs)/planner')}>
-              <Text style={[s.cardTitle, dark && { color: '#eee' }]}>To Do:</Text>
+            <Pressable style={[s.card, dark && { backgroundColor: t.card }]} onPress={() => router.push('/(tabs)/planner')}>
+              <Text style={[s.cardTitle, dark && { color: t.text }]}>To Do:</Text>
               {todos.length > 0
                 ? todos.slice(0, 3).map((t) => (
                     <View key={t.id} style={s.todoRow}>
                       <View style={[s.dot, t.completed && { backgroundColor: colors.success }]} />
-                      <Text style={[s.todoText, t.completed && s.todoStrike, dark && { color: '#bbb' }]} numberOfLines={1}>
+                      <Text style={[s.todoText, t.completed && s.todoStrike, dark && { color: t.textSecondary }]} numberOfLines={1}>
                         {t.title}
                       </Text>
                     </View>
@@ -96,7 +98,7 @@ export default function DashboardScreen() {
                 : DEFAULT_TODOS.map((t) => (
                     <View key={t} style={s.todoRow}>
                       <View style={s.dot} />
-                      <Text style={[s.todoText, dark && { color: '#bbb' }]} numberOfLines={1}>{t}</Text>
+                      <Text style={[s.todoText, dark && { color: t.textSecondary }]} numberOfLines={1}>{t}</Text>
                     </View>
                   ))
               }
@@ -105,10 +107,10 @@ export default function DashboardScreen() {
 
           {/* Row 2 */}
           <View style={s.gridRow}>
-            <View style={[s.card, dark && { backgroundColor: '#1E1E1E' }]}>
-              <Text style={[s.cardTitle, dark && { color: '#eee' }]}>Event Information{'\n'}& Rubrics</Text>
-              <Text style={[s.cardSub, dark && { color: '#aaa' }]}>Tap for info on all FBLA event and judging criteria</Text>
-              <Pressable style={s.arrowWrap} onPress={() => router.push('/(tabs)/event-information')}>
+            <View style={[s.card, dark && { backgroundColor: t.card }]}>
+              <Text style={[s.cardTitle, dark && { color: t.text }]}>Event Information{'\n'}& Rubrics</Text>
+              <Text style={[s.cardSub, dark && { color: t.textSecondary }]}>Tap for info on all FBLA event and judging criteria</Text>
+              <Pressable style={s.arrowWrap} onPress={() => router.push('/(tabs)/my-event?tab=browse')}>
                 <ArrowCircle />
               </Pressable>
             </View>
@@ -126,9 +128,9 @@ export default function DashboardScreen() {
 
           {/* Row 3 */}
           <View style={s.gridRow}>
-            <View style={[s.card, dark && { backgroundColor: '#1E1E1E' }]}>
-              <Text style={[s.cardTitle, dark && { color: '#eee' }]}>ID Upload/{'\n'}Access</Text>
-              <Text style={[s.cardSub, dark && { color: '#aaa' }]}>Upload/Access your student ID for easy access here!</Text>
+            <View style={[s.card, dark && { backgroundColor: t.card }]}>
+              <Text style={[s.cardTitle, dark && { color: t.text }]}>ID Upload/{'\n'}Access</Text>
+              <Text style={[s.cardSub, dark && { color: t.textSecondary }]}>Upload/Access your student ID for easy access here!</Text>
               <Pressable style={s.arrowWrap} onPress={() => router.push('/(tabs)/id-upload')}>
                 <ArrowCircle />
               </Pressable>
