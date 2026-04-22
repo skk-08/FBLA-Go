@@ -1,8 +1,8 @@
-# FBLAgo
+# FBLA Go
 
 > **Your FBLA. All in one place.**
 
-FBLAgo is a cross-platform mobile application built for the **FBLA State 2025–2026 Mobile Application Development** competition. It centralizes the FBLA member experience: events, chapter communication, deadlines, rubrics, and member ID in one unified app.
+FBLAgo is a cross-platform mobile application built for the **FBLA State 2025 - 2026 Mobile Application Development** competition. It centralizes the FBLA member experience: events, chapter communication, deadlines, rubrics, and member ID in one unified app.
 
 ---
 
@@ -21,13 +21,13 @@ FBLAgo is a cross-platform mobile application built for the **FBLA State 2025–
 
 ---
 
-## Architecture — MVVM
+## Architecture: MVVM (Model-View-ViewModel)
 
 The app is divided into three independently testable modules:
 
-- **Authentication Module** — login, signup, member profiles, encrypted ID storage
-- **Data/API Module** — announcements, event info, planner sync via Supabase
-- **UI Component Library** — all reusable interface elements
+- **Authentication Module**: login, signup, member profiles, encrypted ID storage
+- **Data/API Module**: announcements, event info, planner sync via Supabase
+- **UI Component Library**: all reusable interface elements
 
 ```
 /app                        ← Expo Router screens (file-based routing)
