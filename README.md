@@ -258,7 +258,7 @@ Chapter advisers hold the `adviser` role with visibility into all chapter messag
 ## Competition Info
 
 - **Event:** FBLA Mobile Application Development
-- **Competition:** FBLA State 2025–2026
+- **Competition:** FBLA State 2025-2026
 - **Presentation:** 7-minute demo + 3-minute Q&A
 - **Platform:** iOS primary, Android secondary (Expo cross-platform)
 - **Team:** Aditi & Srinidhi
